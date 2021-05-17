@@ -9,9 +9,7 @@ File to detect and extract cards in an image.
 """
 
 # Imports
-from typing import Counter
 import cv2 as cv
-import numpy as np
 
 # Card detector class
 class Card_Detector:
@@ -36,7 +34,8 @@ class Card_Detector:
         
         # Extract level of background to compute an adaptive threshold
         w, h = image.shape[0:2]
-        bkg_level = gray[int(h/100)][int(w/2)]
+        # bkg_level = gray[int(h/100)][int(w/2)]
+        bkg_level = gray[0][0]
         thresh_filter = bkg_level + self.THRESH
 
         # Filter with adaptive threshold
@@ -49,7 +48,8 @@ class Card_Detector:
     def find_cards(self, img):
 
         # Extract contours
-        contours, heir = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        # contours, heir = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        contours, heir = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         # Sort contours
         contours = sorted(contours, key=cv.contourArea, reverse=True)
 
@@ -70,7 +70,9 @@ class Card_Detector:
             if ((size < self.CARD_AREA_MAX) and (size > self.CARD_AREA_MIN) and (len(vertices) == 4)):
                 # Append to new list
                 card_contours.append(i)
-                print("Card found.")
+
+        # Reprort number of cards found
+        print(len(card_contours), "cards found.")
 
         # Return contours of cards
         return card_contours
