@@ -47,6 +47,6 @@ if __name__ == "__main__":
     # Set path to folder with card images
     folder_path = "Card-Dataset\\Card-Images"
     # Set file name for label file
-    label_filename = "Card-Labels.csv"
+    label_filename = "Card-Dataset\\Card-Labels.csv"
     # Create labels
     create_labels(folder_path, label_filename)
