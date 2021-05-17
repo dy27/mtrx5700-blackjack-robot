@@ -12,6 +12,7 @@ File to generate dataset labels.
 import csv
 import os
 
+# Card dictionary to assign integer value from 0 to 51 for cards
 card_dict = {"C01" : 0,  "C02" : 1,  "C03" : 2,  "C04" : 3,  "C05" : 4,  "C06" : 5,  "C07" : 6,
              "C08" : 7,  "C09" : 8,  "C10" : 9,  "C11" : 10, "C12" : 11, "C13" : 12,
 
@@ -24,18 +25,28 @@ card_dict = {"C01" : 0,  "C02" : 1,  "C03" : 2,  "C04" : 3,  "C05" : 4,  "C06" :
              "S01" : 39, "S02" : 40, "S03" : 41, "S04" : 42, "S05" : 43, "S06" : 44, "S07" : 45,
              "S08" : 46, "S09" : 47, "S10" : 48, "S11" : 49, "S12" : 50, "S13" : 51}
 
+# Function to create card labels
 def create_labels(folder, file):
-
+    # List of files in folder
     file_list = os.listdir(folder)
-
+    # Use file name to open a csv file
     with open(file, "w", newline="") as csv_file:
+        # Initialise writer
         csv_writer = csv.writer(csv_file)
+        # Iterate through each file name
         for f in file_list:
-            card_type = card_dict[f[0:3]]
-            row = [f, card_type]
+            # Extract card value using part of file name as dictionary key
+            card_num = card_dict[f[0:3]]
+            # Create new list combining file name and card number
+            row = [f, card_num]
+            # Write row to csv file
             csv_writer.writerows([row])
 
+# Main function
 if __name__ == "__main__":
+    # Set path to folder with card images
     folder_path = "Card-Dataset\\Card-Images"
+    # Set file name for label file
     label_filename = "Card-Labels.csv"
+    # Create labels
     create_labels(folder_path, label_filename)
