@@ -33,15 +33,14 @@ def scale_img(src_img, scale):
 
 # Main function
 if __name__ == "__main__":
-    
-    print(sys.argv)
 
+    # If extra arguments are given
     if len(sys.argv) == 2:
+        # Set path
         img_path = sys.argv[1]
-        print("custom")
     else:
+        # Default image path
         img_path = "Input_Images\\test_01.jpg"
-        print("default")
 
     # Create card detector
     detector = Card_Detector()
