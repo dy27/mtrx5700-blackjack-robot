@@ -19,3 +19,11 @@ class Blackjack_Card:
         self.suit = suit
         self.number = number
         self.value = value
+
+    def get_card_name(self):
+
+        # 
+        string = self.suit + self.number
+        
+        # 
+        return string

@@ -9,30 +9,18 @@ Info:
 """
 
 # Imports
-from Blackjack_Card import Blackjack_Card
-
+from classes.Blackjack_Card import Blackjack_Card
+import random
 
 # Class declaration
-class Blackjack_Game:
-
-    def __init__(self, num_players=1, num_decks=4):
-
-        # 
-        self.num_players = num_players
-        # 
-        self.num_decks = num_decks
-
-        # 
-        self.create_decks()
-
-        # Print message
-        print("[INFO]: Game initialised.")
+class Blackjack_Deck:
 
     # 
-    def create_decks(self):
+    def __init__(self, num_decks):
         
         # 
-        suits = ["Clubs", "Diamonds", "Hearts", "Spades"]
+        # suits = ["Clubs", "Diamonds", "Hearts", "Spades"]
+        suits = ["C", "D", "H", "S"]
         # 
         numbers = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
         # 
@@ -42,7 +30,7 @@ class Blackjack_Game:
         self.deck = []
 
         # 
-        for deck in range(self.num_decks):
+        for _ in range(num_decks):
             
             # 
             for suit in suits:
@@ -54,10 +42,15 @@ class Blackjack_Game:
                     self.deck.append(Blackjack_Card(suit, number, values[number]))
 
         # Print message
-        print("[INFO]: Decks initialised.")
-        print("[INFO]:", len(self.deck), " cards created.")
+        # print("[INFO]: Decks initialised.")
+        # print("[INFO]:", len(self.deck), "cards created.")
 
-    # 
-    # def deal_initial_cards(self)
+        # Shuffle deck
+        self.shuffle_deck()
+        # print("[INFO]: Deck shuffled.")
 
+        # 
+    def shuffle_deck(self):
 
+        # 
+        random.shuffle(self.deck)
