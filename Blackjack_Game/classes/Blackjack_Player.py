@@ -59,4 +59,4 @@ class Blackjack_Player:
         # Get list of card names
         cards_list = [card.name for card in self.hand]
         # Print list
-        print("[{}]:".format(self.name), "{}".format(cards_list))
+        print("[{}]: {}; Value:{}".format(self.name, cards_list, self.value))
