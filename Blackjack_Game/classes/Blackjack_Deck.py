@@ -54,3 +54,7 @@ class Blackjack_Deck:
 
         # 
         random.shuffle(self.deck)
+
+    def print_deck_size(self):
+        # 
+        print("{} cards in deck".format(len(self.deck)))

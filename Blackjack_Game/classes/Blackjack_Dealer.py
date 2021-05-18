@@ -14,42 +14,45 @@ from classes.Blackjack_Card import Blackjack_Card
 # Class declaration
 class Blackjack_Dealer:
 
-    # 
+    # Class constructor
     def __init__(self, name="Dealer"):
         
-        # 
+        # Set name
         self.name = name
-        # 
+        # Initialise empty hand
         self.hand = []
-        # 
+        # Initialise value of hand
         self.value = 0
-        # 
+        # Flag to track if player actions are eligible
         self.can_play = True
 
         # Print message
-        print("[INFO]: {} created.".format(self.name))
+        print("[INFO]: Dealer, {}, created.".format(self.name))
 
-    # 
+    # Add a card to player's hand
     def add_card_to_hand(self, card):
 
-        # 
+        # Add card to hand
         self.hand.append(card)
-        # 
+        # Update value of hand
         self.update_hand_value()
 
-    #
+    # Update the value of cards held
     def update_hand_value(self):
 
-        # 
+        # Initialise total
         total = 0
 
-        # 
+        # Iterate through each card in hand
         for card in self.hand:
             
-            # 
+            # Sum value of cards in hand
             total = total + card.value
 
-    # 
+    # Print cards held in hand
     def print_hand(self):
-
-        print("[{}]:".format(self.name), "{}|{}".format(self.hand[0].get_card_name(), self.hand[1].get_card_name()))
+        
+        # Get list of card names
+        cards_list = [card.name for card in self.hand]
+        # Print list
+        print("[{}]:".format(self.name), "{}".format(cards_list))

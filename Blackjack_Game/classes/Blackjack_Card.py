@@ -14,11 +14,13 @@ Info:
 # Class declaration
 class Blackjack_Card:
     
-    def __init__(self, suit, number, value):
+    def __init__(self, suit, number, value, x=0, y=0):
 
         self.suit = suit
         self.number = number
         self.value = value
+        self.name = self.suit + self.number
+        self.coords = (x,y)
 
     def get_card_name(self):
 
