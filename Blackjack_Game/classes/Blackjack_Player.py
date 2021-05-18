@@ -50,8 +50,11 @@ class Blackjack_Player:
         # Iterate through each card in hand
         for card in self.hand:
             
-            # Sum value of cards in hand
+            # Cumulatively add value of cards in hand
             total = total + card.value
+
+        # Save value
+        self.value = total
 
     # Print cards held in hand
     def print_hand(self):
