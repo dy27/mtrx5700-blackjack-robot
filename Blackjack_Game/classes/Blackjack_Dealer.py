@@ -36,6 +36,8 @@ class Blackjack_Dealer:
         self.hand.append(card)
         # Update value of hand
         self.update_hand_value()
+        # 
+        # self.print_first_card()
 
     # Update the value of cards held
     def update_hand_value(self):
@@ -58,4 +60,16 @@ class Blackjack_Dealer:
         # Get list of card names
         cards_list = [card.name for card in self.hand]
         # Print list
-        print("[{}]: {}; Value:{}".format(self.name, cards_list, self.value))
+        print("[{}]: Hand: {}; Value:{}".format(self.name, cards_list, self.value))
+
+    # 
+    def print_first_card(self):
+
+        # Print list
+        print("[{}]: Hand: {}; Value:{}".format(self.name, self.hand[0].name, self.value))
+
+    #
+    def print_blackjack_msg(self):
+
+        # 
+        print("[{}]: Blackjack!".format(self.name))

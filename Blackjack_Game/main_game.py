@@ -31,4 +31,4 @@ if __name__ == "__main__":
     Game = Blackjack_Game(Dealer, player_list, Deck)
 
     # 
-    Game.deal_initial_cards()
+    Game.play_game()
