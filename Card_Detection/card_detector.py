@@ -49,7 +49,7 @@ class Card_Detector:
 
         # Extract contours
         # contours, heir = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        contours, heir = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        _, contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         # Sort contours
         contours = sorted(contours, key=cv.contourArea, reverse=True)
 
