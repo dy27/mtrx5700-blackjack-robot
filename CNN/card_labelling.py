@@ -11,6 +11,7 @@ File to generate dataset labels.
 # Imports
 import csv
 import os
+import sys
 
 # Card dictionary to assign integer value from 0 to 51 for cards
 card_dict = {"C01" : 0,  "C02" : 1,  "C03" : 2,  "C04" : 3,  "C05" : 4,  "C06" : 5,  "C07" : 6,
@@ -45,8 +46,8 @@ def create_labels(folder, file):
 # Main function
 if __name__ == "__main__":
     # Set path to folder with card images
-    folder_path = "Card_Dataset\\Card_Images"
+    folder_path = sys.argv[1]
     # Set file name for label file
-    label_filename = "Card_Dataset\\card_labels.csv"
+    label_filename = sys.argv[2]
     # Create labels
     create_labels(folder_path, label_filename)
