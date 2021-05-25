@@ -44,27 +44,29 @@ if __name__ == "__main__":
 
     # Create card detector
     detector = Card_Detector()
-    
-    # Read image and scale down
     img1 = cv.imread(img_path)
-    # cv.imshow("image1", img1)
-    cv.imshow("image1", scale_img(img1, 20))
 
-    # Preprocess image
-    img2 = detector.preprocess(img1)
-    # cv.imshow("image2", img2)
-    cv.imshow("image2", scale_img(img2, 20))
+    detector.detect_cards(img1)
+    
+    # # Read image and scale down
+    # # cv.imshow("image1", img1)
+    # cv.imshow("image1", scale_img(img1, 20))
 
-    # Find contours of cards
-    contours = detector.find_cards(img2)
+    # # Preprocess image
+    # img2 = detector.preprocess(img1)
+    # # cv.imshow("image2", img2)
+    # cv.imshow("image2", scale_img(img2, 20))
 
-    # Draw contours
-    img3 = cv.drawContours(img1, contours, -1, (255,0,0), 10)
-    # cv.imshow("image3", img3)
-    cv.imshow("image3", scale_img(img3, 20))
+    # # Find contours of cards
+    # contours = detector.find_cards(img2)
+
+    # # Draw contours
+    # img3 = cv.drawContours(img1, contours, -1, (255,0,0), 10)
+    # # cv.imshow("image3", img3)
+    # cv.imshow("image3", scale_img(img3, 20))
 
     # Wait for keystroke
-    cv.waitKey(0)
+    # cv.waitKey(0)
 
     # Close all windows
-    cv.destroyAllWindows()
+    # cv.destroyAllWindows()
