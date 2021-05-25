@@ -9,7 +9,7 @@ File to detect and extract cards in an image.
 """
 
 # Imports
-from Detector import Detector
+from detector import Detector
 import cv2 as cv
 import sys
 

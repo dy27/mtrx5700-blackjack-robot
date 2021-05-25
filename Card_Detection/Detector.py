@@ -12,8 +12,6 @@ Info:
 import os
 import cv2 as cv
 import numpy as np
-from card_img import Card_Img
-from train_img import Train_Img
 
 # Card detector class
 class Detector:
