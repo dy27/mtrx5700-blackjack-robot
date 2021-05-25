@@ -4,8 +4,8 @@ Major Project - Blackjack Robot
 Year: 2021
 Group 5 - Curry Shop
 
-card-labelling.py
-File to detect and extract cards in an image.
+File: main.py
+Info: Run the card detection algorithm.
 """
 
 # Imports

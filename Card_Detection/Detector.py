@@ -4,8 +4,8 @@ Major Project - Blackjack Robot
 Year: 2021
 Group 5 - Curry Shop
 
-File: 
-Info:
+File: detector.py
+Info: Class definition for Card Detector.
 """
 
 # Imports
@@ -13,7 +13,7 @@ import os
 import cv2 as cv
 import numpy as np
 
-# Card detector class
+# Card Detector class
 class Detector:
     
     # Constructor
@@ -35,8 +35,6 @@ class Detector:
         blur = cv.GaussianBlur(gray, (5,5), 0)
         
         # Extract level of background to compute an adaptive threshold
-        # w, h = image.shape[0:2]
-        # bkg_level = gray[int(h/100)][int(w/2)]
         bkg_level = gray[0][0]
         thresh_filter = bkg_level + self.THRESH
 
@@ -50,7 +48,6 @@ class Detector:
     def find_cards(self, img):
 
         # Extract contours
-        # contours, heir = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         _, contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         # Sort contours
         contours = sorted(contours, key=cv.contourArea, reverse=True)
@@ -70,6 +67,7 @@ class Detector:
 
             # Check if area is within bounds and contour has 4 vertices
             if ((size < self.CARD_AREA_MAX) and (size > self.CARD_AREA_MIN) and (len(vertices) == 4)):
+
                 # Append to new list
                 card_contours.append(i)
 
@@ -96,18 +94,18 @@ class Detector:
         # Return new image
         return img
 
-    # 
+    # Runs the helper functions to detect and extract the cards
     def detect_cards(self, src_img):
 
-        # 
+        # Perform image preprocessing
         img_copy1 = self.preprocess(src_img)
-        # 
+        # Detect the contours of cards
         contours = self.find_cards(img_copy1)
-        #
-        img_copy2 = cv.drawContours(src_img, contours, -1, (255,0,0), 10)
         
+        # Draw contours
+        img_copy2 = cv.drawContours(src_img, contours, -1, (255,0,0), 10)
+        # Show annotated image
         cv.imshow("image3", self.scale_img(img_copy2, 50))
-
         cv.waitKey(0)
 
         
