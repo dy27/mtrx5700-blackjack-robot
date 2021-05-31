@@ -1,0 +1,7 @@
+int32 type
+geometry_msgs/Point[] card_points
+bool[] use_runway_list
+bool[] flip_card_list
+---
+---
+int32 result
