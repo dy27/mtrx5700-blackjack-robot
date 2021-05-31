@@ -27,15 +27,14 @@ def client():
     print(quat)
 
     goal = blackjack_dealer_robot.msg.DealerGoal()
-    goal.type = int(sys.argv[1])
-    goal.pose = geometry_msgs.msg.Pose()
-    goal.pose.position.x = 0.0
-    goal.pose.position.y = 0.5
-    goal.pose.position.z = 0.05
-    goal.pose.orientation.x = -0.5
-    goal.pose.orientation.y = 0.5
-    goal.pose.orientation.z = 0.5
-    goal.pose.orientation.w = 0.5
+    goal.type = 0
+    goal.card_points = []
+    point = geometry_msgs.msg.Point()
+    point.x, point.y, point.z = 0.68, 0.4, 0.0
+    goal.card_points.append(point)
+
+    goal.use_runway_list = [False]
+    goal.flip_card_list = [False]
 
     # Sends the goal to the action server.
     client.send_goal(goal)

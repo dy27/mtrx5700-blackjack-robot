@@ -1,3 +1,3 @@
-int player_id
-int action_type
-int action_value
+int32 player_id
+int32 action_type
+int32 action_value

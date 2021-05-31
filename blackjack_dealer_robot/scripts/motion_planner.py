@@ -27,14 +27,14 @@ import copy
 DEBUG_MODE = True
 
 def DEBUG(message):
-    if STEP_THROUGH:
+    if DEBUG_MODE:
         print(message)
-        input("Press Enter to continue...")
+        raw_input("Press Enter to continue...")
 
 
 class EndEffectorOffset:
-    CARD_GRIP = [0.05, 0.1]
-    CARD_SCOOP = [-0.05, 0.1]
+    CARD_GRIP = [0.05, 0.01]
+    CARD_SCOOP = [-0.05, 0.01]
 
 
 class ActionType:
@@ -81,11 +81,11 @@ class MotionPlanner:
 
 
 
-        self.shoe_position = [0.21, 0.085, 0.03]
+        self.shoe_position = [0.21, 0.85, 0.03]
 
-        self.table_offset = [0.0, 1.2, 0.02]
+        self.table_offset = [-0.68, 1.2, 0.02]
 
-        self.clearance = 0.1
+        self.clearance = 0.05
         self.penetration = 0.005
 
         self.card_runway_y = 0.49
@@ -137,12 +137,12 @@ class MotionPlanner:
         rospy.spin()
 
     
-    def table_to_robot_transform(table_point):
+    def table_to_robot_transform(self, table_point):
         table_x, table_y, table_z = table_point
 
-        robot_x = table_x - self.table_offset[0]
-        robot_y = -table_y - self.table_offset[1]
-        robot_z = table_z - self.table_offset[2]
+        robot_x = table_x + self.table_offset[0]
+        robot_y = -table_y + self.table_offset[1]
+        robot_z = table_z + self.table_offset[2]
 
         return [robot_x, robot_y, robot_z]
 
@@ -151,7 +151,7 @@ class MotionPlanner:
         print("EXECUTE CALLBACK")
             
         if goal.type == ActionType.DEAL:
-            self.deal_cards(goal.points, goal.use_runway_list, goal.flip_card_list)
+            self.deal_cards(goal.card_points, goal.use_runway_list, goal.flip_card_list)
 
         elif goal.type == ActionType.CLEAR:
             self.clear_cards()
@@ -165,56 +165,70 @@ class MotionPlanner:
         self.action_server.set_succeeded(self.action_result)
 
 
-    def deal_cards(self, points, use_runway_list):
+    def deal_cards(self, points, use_runway_list, flip_card_list):
         for point, use_runway, flip_card in zip(points, use_runway_list, flip_card_list):
 
             # Move to above shoe
             pose = geometry_msgs.msg.Pose()
-            pose.position.x, pose.position.y, pose.position.z = self.table_to_robot_transform([self.shoe_position.x,
-                                                                    self.shoe_position.y,
-                                                                    self.shoe_position.z + self.clearance])
+            pose.position.x, pose.position.y, pose.position.z = self.table_to_robot_transform([self.shoe_position[0],
+                                                                    self.shoe_position[1],
+                                                                    self.shoe_position[2] + self.clearance])
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
-            move_eef_to_pose(eef_pose)
+            print("moving to ", pose)
+            self.move_eef_to_pose(eef_pose)
+            DEBUG('reached shoe')
 
             # Move to shoe position to contact card
             pose.position.z -= self.clearance + self.penetration
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
+            print("moving to ", pose)
             self.move_eef_to_pose(eef_pose)
+            DEBUG('contacted card')
 
             # Slide card out of shoe step 1
             pose.position.x += 0.02
             pose.position.z -= 0.0228
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
+            print("moving to ", eef_pose.position, pose.position)
             self.move_eef_to_pose(eef_pose)
+            DEBUG('reached card slide 1')
+            print()
 
             # Slide card out of shoe step 2
             pose.position.x += 0.04
             pose.position.z -= 0.0072
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
+            print("moving to ", eef_pose.position, pose.position, '\n')
             self.move_eef_to_pose(eef_pose)
+            DEBUG('reached card slide 2')
+            
 
             # Slide card out of shoe step 3
             pose.position.x += 0.05
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
+            print("moving to ", pose)
             self.move_eef_to_pose(eef_pose)
+            DEBUG('reached card slide 3')
 
             # Move card to runway
             pose.position.y = self.card_runway_y
             eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=15)
+            print("moving to ", pose)
             self.move_eef_to_pose(eef_pose)
+            DEBUG('reached runway')
 
             # Get target location to move card to
             target_point = self.table_to_robot_transform([point.x, point.y, point.z])
 
             if flip_card:
                 # Move card to target location x plus allowance for flip
-                pose.position.x = target_point.x - (self.card_shape[0] + 0.004)
+                pose.position.x = target_point[0] - (self.card_shape[0] + 0.004)
 
                 # Release grip on the card
                 pose.position.z += self.clearance + self.penetration
@@ -242,16 +256,33 @@ class MotionPlanner:
 
             else:
                 # Move card to target location x
-                pose.position.x = target_point.x
-                eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-                self.move_eef_to_pose(eef_pose)
+                # pose.position.x = target_point[0]
+                # eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                #                                 direction='left', angle_deg=15)
+                # print("moving to ", pose)
+                # self.move_eef_to_pose(eef_pose)
+                waypoints = [copy.deepcopy(pose)]
+                pose.position.x = target_point[0]
+                waypoints.append(copy.deepcopy(pose))
+                plan, _ = self.plan_cartesian_path(waypoints)
+                print(waypoints)
+                self.execute_plan(plan)
+                DEBUG('moved to target x')
 
             # Move card to target location y
-            pose.position.y = target_point.y
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                            direction='left', angle_deg=15)
-            self.move_eef_to_pose(eef_pose)
+            # pose.position.y = target_point[1]
+            # eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+            #                                 direction='left', angle_deg=15)
+            # print("moving to ", pose)
+            # self.move_eef_to_pose(eef_pose)
+            # DEBUG('moved to target y')
+
+            waypoints = [copy.deepcopy(pose)]
+            pose.position.y = target_point[1]
+            waypoints.append(copy.deepcopy(pose))
+            plan, _ = self.plan_cartesian_path(waypoints)
+            print(waypoints)
+            self.execute_plan(plan)
 
             # Release grip on the card
             pose.position.z += self.clearance + self.penetration
@@ -264,10 +295,11 @@ class MotionPlanner:
         pass
 
 
-    def flip_card(point, table_ref_frame=True):
+    def flip_card(self, point, table_ref_frame=True):
         if table_ref_frame:
             point.x, point.y, point.z = self.table_to_robot_transform([point.x, point.y, point.z])
 
+        # Move above the side of the card
         pose = geometry_msgs.msg.Pose()
         pose.position.x = point.x - (0.5 * self.card_shape[0] + 0.02)
         pose.position.y = point.y
@@ -276,9 +308,14 @@ class MotionPlanner:
                                                 direction='right', angle_deg=15)
         self.move_eef_to_pose(eef_pose)
 
+        # Move down to table
         pose.position.z -= self.clearance + self.penetration
+        eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15)
+        self.move_eef_to_pose(eef_pose)
 
-        pose.
+        # Move under card
+        pose.position.x += 0.25 * self.card_shape[0] + 0.02
         eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15)
         self.move_eef_to_pose(eef_pose)
@@ -350,6 +387,9 @@ class MotionPlanner:
         # It is always good to clear your targets after planning with poses.
         # Note: there is no equivalent function for clear_joint_value_targets()
         self.move_group.clear_pose_targets()
+
+
+    # def linear_interpolation()
 
 
     def plan_cartesian_path(self, waypoints, eef_step=0.01, jump=0.0, max_attempts=200):
