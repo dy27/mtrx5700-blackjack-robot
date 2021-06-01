@@ -24,7 +24,9 @@ class Blackjack_Dealer:
         # Initialise value of hand
         self.value = 0
         # Flag to track if player actions are eligible
-        self.can_play = True
+        self.action = True
+        # Flag to track if player actions are eligible
+        self.bust = False
 
         # Print message
         print("[INFO]: Dealer, {}, created.".format(self.name))
@@ -36,8 +38,6 @@ class Blackjack_Dealer:
         self.hand.append(card)
         # Update value of hand
         self.update_hand_value()
-        # 
-        # self.print_first_card()
 
     # Update the value of cards held
     def update_hand_value(self):
@@ -62,14 +62,14 @@ class Blackjack_Dealer:
         # Print list
         print("[{}]: Hand: {}; Value:{}".format(self.name, cards_list, self.value))
 
-    # 
+    # Reveal first card
     def print_first_card(self):
 
-        # Print list
-        print("[{}]: Hand: {}; Value:{}".format(self.name, self.hand[0].name, self.value))
+        # Print first card
+        print("[{}]: Hand: {}".format(self.name, self.hand[0].name))
 
-    #
+    # Print message if dealer gets blackjack
     def print_blackjack_msg(self):
 
-        # 
+        # Print message
         print("[{}]: Blackjack!".format(self.name))

@@ -29,8 +29,10 @@ class Blackjack_Player:
         self.value = 0
         # Flag to track if player actions are eligible
         self.bust = False
-        # 
+        # Variable to track player action
         self.action = None
+        # 
+        self.winner = False
 
         # Print message
         print("[INFO]: Player, {}, created.".format(self.name))
@@ -42,7 +44,6 @@ class Blackjack_Player:
         self.hand.append(card)
         # Update value of hand
         self.update_hand_value()
-        # 
         self.print_hand()
 
     # Update the value of cards held
@@ -60,10 +61,10 @@ class Blackjack_Player:
         # Save value
         self.value = total
 
-    # 
+    # Take player input
     def take_input(self):
         
-        # 
+        # Receive input
         self.action = input("[GAME]: HIT (h) or STAY (s)?")
 
 
@@ -75,10 +76,26 @@ class Blackjack_Player:
         # Print list
         print("[{}]: Hand: {}; Value:{}".format(self.name, cards_list, self.value))
 
-    # 
+    # Print message if blackjack is achieved
     def print_blackjack_msg(self):
 
-        # 
+        # Print message
         print("[{}]: Blackjack!".format(self.name))
+
+    # Print message if player wins
+    def print_win_msg(self):
+        
+        # Set win flag
+        self.winner = True 
+        # Print message
+        print("[{}]: Wins!".format(self.name))
+
+    # Print message if player loses
+    def print_lose_msg(self):
+        
+        # Clear win flag
+        self.winner = False
+        # Print message
+        print("[{}]: Loses!".format(self.name))
 
     
