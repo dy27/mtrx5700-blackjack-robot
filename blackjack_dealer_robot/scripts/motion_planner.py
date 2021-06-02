@@ -24,7 +24,7 @@ from moveit_commander.conversions import pose_to_list
 
 import copy
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def DEBUG(message):
     if DEBUG_MODE:
@@ -33,11 +33,12 @@ def DEBUG(message):
 
 
 class EndEffectorOffset:
-    CARD_GRIP = [0.05, 0.01]
-    CARD_SCOOP = [-0.05, 0.01]
+    CARD_GRIP = [-0.055, -0.024]
+    CARD_SCOOP = [0.055, -0.024]
+    # CARD_GRIP = [0., -0.024]
+    # CARD_SCOOP = [0., -0.024]
 
-
-class ActionType:
+class ActionType:   
     DEAL = 0
     CLEAR = 1
     FLIP = 2
@@ -81,14 +82,17 @@ class MotionPlanner:
 
 
 
-        self.shoe_position = [0.21, 0.85, 0.03]
+        self.shoe_position = [0.208, 0.54, 0.03]
 
-        self.table_offset = [-0.68, 1.2, 0.02]
+        self.table_offset = [-0.525, 0.675, 0.012]
+        # self.table_offset = [-0.45, 0.9, 0.0]
+
+        self.table_shape = (0.9, 0.6)
 
         self.clearance = 0.05
-        self.penetration = 0.005
+        self.penetration = 0.0075
 
-        self.card_runway_y = 0.49
+        self.card_runway_y = 0.29
 
         self.card_shape = (0.064, 0.089)
         
@@ -154,184 +158,254 @@ class MotionPlanner:
             self.deal_cards(goal.card_points, goal.use_runway_list, goal.flip_card_list)
 
         elif goal.type == ActionType.CLEAR:
-            self.clear_cards()
+            self.clear_cards(goal.card_points)
 
         elif goal.type == ActionType.MOVE:
             self.move_eef_to_pose(goal.pose)
 
         elif goal.type == ActionType.FLIP:
-            self.flip_card(goal.pose.position)
+            for p in goal.card_points:
+                self.flip_card([p.x, p.y, p.z])
 
         self.action_server.set_succeeded(self.action_result)
 
 
     def deal_cards(self, points, use_runway_list, flip_card_list):
-        for point, use_runway, flip_card in zip(points, use_runway_list, flip_card_list):
+
+        DEBUG('starting dealing')
+
+        pose_waypoints = []
+
+        for point, use_runway, flip in zip(points, use_runway_list, flip_card_list):
+
+            
+            # self.move_to_table_point([0.05,0.05,0.05], end_effector_offset=EndEffectorOffset.CARD_GRIP,
+            #                                         direction='left', angle_deg=30, linear=False)
+            # DEBUG('reached origin')
+
+            # self.move_to_table_point([0.05,0.05,0.0-self.penetration], end_effector_offset=EndEffectorOffset.CARD_GRIP,
+            #                                         direction='left', angle_deg=30, linear=True)
+            # DEBUG('reached origin')
+
+            # self.move_to_table_point([0.05,0.4,0.0-self.penetration], end_effector_offset=EndEffectorOffset.CARD_GRIP,
+            #                                         direction='left', angle_deg=30, linear=True)
+            # DEBUG('reached origin')
+
+            
+            # while True:
 
             # Move to above shoe
-            pose = geometry_msgs.msg.Pose()
-            pose.position.x, pose.position.y, pose.position.z = self.table_to_robot_transform([self.shoe_position[0],
-                                                                    self.shoe_position[1],
-                                                                    self.shoe_position[2] + self.clearance])
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", pose)
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('reached shoe')
+            table_point = [self.shoe_position[0], self.shoe_position[1], self.shoe_position[2] + self.clearance]
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=0, linear=True)
+            DEBUG('starting dealing')
 
-            # Move to shoe position to contact card
-            pose.position.z -= self.clearance + self.penetration
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", pose)
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('contacted card')
+            # Contact card
+            self.penetration += 0.0025
+            table_point[2] -= self.clearance + self.penetration
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=0, linear=True)
+            DEBUG('starting dealing')
 
-            # Slide card out of shoe step 1
-            pose.position.x += 0.02
-            pose.position.z -= 0.0228
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", eef_pose.position, pose.position)
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('reached card slide 1')
-            print()
+            # # Change angle
+            # self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+            #                                         direction='left', angle_deg=30, linear=True)
+            # DEBUG('starting dealing')
 
-            # Slide card out of shoe step 2
-            pose.position.x += 0.04
-            pose.position.z -= 0.0072
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", eef_pose.position, pose.position, '\n')
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('reached card slide 2')
-            
+            # Extraction step 1
+            table_point[0] += 0.02
+            table_point[2] -= 0.0228
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=15, linear=True)
+            DEBUG('starting dealing')
 
-            # Slide card out of shoe step 3
-            pose.position.x += 0.05
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", pose)
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('reached card slide 3')
+            # Extraction step 2
+            self.penetration -= 0.0025
+            table_point[0] += 0.04
+            table_point[2] -= 0.0072
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=30, linear=True)
+            DEBUG('starting dealing')
 
-            # Move card to runway
-            pose.position.y = self.card_runway_y
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-            print("moving to ", pose)
-            self.move_eef_to_pose(eef_pose)
-            DEBUG('reached runway')
+            # Extraction step 3
+            table_point[0] += 0.05
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=30, linear=True)
+            DEBUG('starting dealing')
 
-            # Get target location to move card to
-            target_point = self.table_to_robot_transform([point.x, point.y, point.z])
 
-            if flip_card:
-                # Move card to target location x plus allowance for flip
-                pose.position.x = target_point[0] - (self.card_shape[0] + 0.004)
+            table_point[1] = self.card_runway_y
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=30, linear=True)
+            DEBUG('starting dealing')
 
-                # Release grip on the card
-                pose.position.z += self.clearance + self.penetration
-                eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-                self.move_eef_to_pose(eef_pose)
-            
-                # Remember current pose
-                current_pose = copy.deepcopy(pose)
+            if flip:
+                card_shift = 0.000
+
+                # Don't move card into place if the target position is too close to the left edge
+                if point.x - (self.card_shape[0] + card_shift) >= 0.05:
+                    # Move to target x value plus allowance for flip
+                    table_point[0] = point.x - (self.card_shape[0] + card_shift)
+                    self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                            direction='left', angle_deg=15, linear=True)
+                    DEBUG('starting dealing')
 
                 # Flip card
-                flip_card(pose.position, table_ref_frame=False)
+                table_point = self.flip_card(table_point, card_shift=card_shift)
 
-                # Move back to previous pose
-                pose = current_pose
-                eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-                self.move_eef_to_pose(eef_pose)
+                # Move above new card location
+                table_point[2] = self.clearance
+                self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                        direction='left', angle_deg=30, linear=True)
+                DEBUG('starting dealing')
 
-                # Regrip the card
-                pose.z -= self.clearance + self.penetration
-                eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                                direction='left', angle_deg=15)
-                self.move_eef_to_pose(eef_pose)
+                # Regrip card
+                table_point[2] = -self.penetration
+                self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                        direction='left', angle_deg=30, linear=True)
+                DEBUG('starting dealing')
+
+                # Adjust card position if necessary
+                if table_point[0] != point.x:
+                    table_point[0] = point.x
+                    self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                            direction='left', angle_deg=30, linear=True)
+                    DEBUG('starting dealing')
 
             else:
-                # Move card to target location x
-                # pose.position.x = target_point[0]
-                # eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                #                                 direction='left', angle_deg=15)
-                # print("moving to ", pose)
-                # self.move_eef_to_pose(eef_pose)
-                waypoints = [copy.deepcopy(pose)]
-                pose.position.x = target_point[0]
-                waypoints.append(copy.deepcopy(pose))
-                plan, _ = self.plan_cartesian_path(waypoints)
-                print(waypoints)
-                self.execute_plan(plan)
-                DEBUG('moved to target x')
+                # Move to target x value
+                table_point[0] = point.x
+                self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                        direction='left', angle_deg=30, linear=True)
+                DEBUG('starting dealing')
 
-            # Move card to target location y
-            # pose.position.y = target_point[1]
-            # eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-            #                                 direction='left', angle_deg=15)
-            # print("moving to ", pose)
-            # self.move_eef_to_pose(eef_pose)
-            # DEBUG('moved to target y')
+            # Move to target y value
+            table_point[1] = point.y
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=30, linear=True)
+            DEBUG('starting dealing')
 
-            waypoints = [copy.deepcopy(pose)]
-            pose.position.y = target_point[1]
-            waypoints.append(copy.deepcopy(pose))
-            plan, _ = self.plan_cartesian_path(waypoints)
-            print(waypoints)
-            self.execute_plan(plan)
-
-            # Release grip on the card
-            pose.position.z += self.clearance + self.penetration
-            eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                                            direction='left', angle_deg=15)
-            self.move_eef_to_pose(eef_pose)
+            # Move up 
+            table_point[2] = self.clearance
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                    direction='left', angle_deg=30, linear=True)
+            DEBUG('starting dealing')
 
 
     def clear_cards(self, points):
-        pass
+        if len(points) == 0:
+            return
+
+        DEBUG('starting dealing')
+        table_point = [points[0].x, points[0].y, self.clearance]
+        table_point[0] -= self.card_shape[0]/2 + 0.02
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=15, linear=True)
+
+        DEBUG('starting dealing')
+        table_point[2] = -self.penetration
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=15, linear=True)
+
+        DEBUG('starting dealing')
+        for point in points:
+            table_point[0] = point.x
+            table_point[1] = point.y
+            table_point[2] = -self.penetration
+            self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=15, linear=True)
+
+        DEBUG('starting dealing')
+        table_point[0] = self.table_shape[0] + 0.01
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=15, linear=True)
+
+        DEBUG('starting dealing')
+        table_point[2] = self.clearance
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=15, linear=True)
+
+        DEBUG('starting dealing')
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                    direction='right', angle_deg=35, linear=True)
 
 
-    def flip_card(self, point, table_ref_frame=True):
-        if table_ref_frame:
-            point.x, point.y, point.z = self.table_to_robot_transform([point.x, point.y, point.z])
+    def flip_card(self, table_point, restore_card_position=False, allowance=0.02, card_leverage=0.02, card_shift=0.005):
+        """Flip a card located at table_point"""
+        # # Move to target x value plus allowance for flip
+        # table_point[0] = point.x - (self.card_shape[0]/2 + 0.002)
+        # self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+        #                                         direction='right', angle_deg=15, linear=True)
+        # DEBUG('starting dealing')
 
-        # Move above the side of the card
-        pose = geometry_msgs.msg.Pose()
-        pose.position.x = point.x - (0.5 * self.card_shape[0] + 0.02)
-        pose.position.y = point.y
-        pose.position.z = point.z + self.clearance
-        eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
-                                                direction='right', angle_deg=15)
-        self.move_eef_to_pose(eef_pose)
+        DEBUG('BEGINNING FLIP')
 
-        # Move down to table
-        pose.position.z -= self.clearance + self.penetration
-        eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
-                                                direction='right', angle_deg=15)
-        self.move_eef_to_pose(eef_pose)
+        # Move up to clearance
+        table_point[2] = self.clearance
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                                                direction='left', angle_deg=30, linear=True)
+        DEBUG('starting dealing')
+
+        # Store copy of original point
+        original_point = copy.deepcopy(table_point)
+
+        # Move to allow for card scoop
+        table_point[0] -= self.card_shape[0]/2 + allowance
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15, linear=True)
+        DEBUG('starting dealing')
+
+        # Move down
+        table_point[2] = -self.penetration
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15, linear=True)
+        DEBUG('starting dealing')
 
         # Move under card
-        pose.position.x += 0.25 * self.card_shape[0] + 0.02
-        eef_pose = self.eef_pose_transform(pose, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
-                                                direction='right', angle_deg=15)
-        self.move_eef_to_pose(eef_pose)
+        table_point[0] += allowance + card_leverage
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15, linear=True)
+        DEBUG('starting dealing')
+
+        # Lift card partially up
+        table_point[2] += 0.025
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15, linear=True)
+        DEBUG('starting dealing')
+
+        # Move up and across to flip
+        table_point[0] += 0.1
+        table_point[2] += 0.03
+        self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
+                                                direction='right', angle_deg=15, linear=True)
+        DEBUG('starting dealing')
+
+        new_table_point = original_point
+        new_table_point[0] += self.card_shape[0] + card_shift
+
+        return new_table_point
+
+
+
+        
+
+
+
 
 
 
     def eef_pose_transform(self, target_pose, end_effector_offset, direction='left', angle_deg=15):
         """Returns the pose to move the robot arm to such that the end effector is at target_pose."""
 
+        # angle_deg = 0
+
         assert 0 <= angle_deg <= 90
         angle_rad = math.radians(angle_deg)
 
         if direction == 'left':
-            euler = [math.pi/2, math.pi/2 + angle_rad, 0]
-        elif direction == 'right':
             euler = [math.pi/2, math.pi/2 - angle_rad, 0]
+        elif direction == 'right':
+            euler = [math.pi/2, math.pi/2 + angle_rad, 0]
         else:
             raise Exception('Invalid direction specified.')
 
@@ -350,20 +424,43 @@ class MotionPlanner:
             negative_x = True
             x = abs(x)
 
-        if not negative_x:
-            target_pose.position.x += -x*cos_angle + y*sin_angle
-        else:
-            target_pose.position.x -= -x*cos_angle + y*sin_angle
+        transformed_pose = geometry_msgs.msg.Pose()
 
-        target_pose.position.z += x*sin_angle + y*cos_angle
+        if not negative_x:
+            transformed_pose.position.x = target_pose.position.x - x*cos_angle + y*sin_angle
+        else:
+            transformed_pose.position.x = target_pose.position.x + x*cos_angle - y*sin_angle
+
+        transformed_pose.position.y = target_pose.position.y + 0.027
+        transformed_pose.position.z = target_pose.position.z + x*sin_angle + y*cos_angle
 
         target_quat = quaternion_from_euler(*euler)
-        target_pose.orientation.x = target_quat[0]
-        target_pose.orientation.y = target_quat[1]
-        target_pose.orientation.z = target_quat[2]
-        target_pose.orientation.w = target_quat[3]
+        print(target_quat)
+        transformed_pose.orientation.x = target_quat[0]
+        transformed_pose.orientation.y = target_quat[1]
+        transformed_pose.orientation.z = target_quat[2]
+        transformed_pose.orientation.w = target_quat[3]
+        print(transformed_pose)
 
-        return target_pose
+        return transformed_pose
+
+
+    def move_to_table_point(self, table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
+                            direction='left', angle_deg=15, linear=False):
+        pose = geometry_msgs.msg.Pose()
+        pose.position.x, pose.position.y, pose.position.z = self.table_to_robot_transform(table_point)
+        eef_pose = self.eef_pose_transform(pose, end_effector_offset, direction, angle_deg)
+        if linear:
+            plan, _ = self.plan_cartesian_path([eef_pose])
+            self.execute_plan(plan)
+        else:
+            self.move_eef_to_pose(eef_pose)
+
+
+    def move_linear(self, current_pose, target_pose):
+        waypoints = [current_pose, target_pose]
+        plan, _ = self.plan_cartesian_path(waypoints)
+        self.execute_plan(plan)
 
 
     def move_to_pose(self, table_pose):

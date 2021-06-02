@@ -64,7 +64,7 @@ class BlackjackGameManager:
 
         self.card_shape = (0.064, 0.089)
         self.card_spacing = ()
-        self.player_spacing = 
+        self.player_spacing = 0.05
 
 
         self.player_coordinates = [(0.08, 0.2), (0.4, 0.2), (0.72, 0.2), (1.04, 0.2)]
@@ -77,7 +77,7 @@ class BlackjackGameManager:
         self.blackjack_game = BlackjackGame(max_players=4)
 
 
-        self.player_join_queue = []
+        # self.player_join_queue = []
         self.player_leave_queue = []
         # self.player_move_queue = []
         
@@ -85,6 +85,7 @@ class BlackjackGameManager:
         self.players = [None] * self.max_players
         self.player_bets = [None] * self.max_players
         self.player_moves = [None] * self.max_players
+        self.player_balances = [None] * self.max_players
 
         self.game_status = GameStatus.WAITING_FOR_PLAYERS
 
@@ -93,12 +94,12 @@ class BlackjackGameManager:
         self.action_client = actionlib.SimpleActionClient('dealer_action', blackjack_dealer_robot.msg.DealerAction)
         self.action_client.wait_for_server()
 
-        self.robot_init()
+        self.robot_start()
 
             
         # rospy.spin()
 
-    def robot_init(self):
+    def robot_start(self):
         """Robot operation loop."""
 
         while True:
@@ -116,6 +117,7 @@ class BlackjackGameManager:
 
             
             self.game_status = GameStatus.WAITING_FOR_BETS
+            self.blackjack_game.wait_for_bets()
 
             bet_timer = Timer(15)
             bet_timer.start()
@@ -129,7 +131,9 @@ class BlackjackGameManager:
                     players[i] = None
                 
 
+
             self.game_status = GameStatus.DEALING
+            self.blackjack_game.initial_deal()
 
             goal = blackjack_dealer_robot.msg.DealerGoal()
             goal.type = int(sys.argv[1])
