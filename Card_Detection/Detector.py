@@ -19,27 +19,37 @@ class Detector:
     # Constructor
     def __init__(self):
         
-        # Set value for threshold filter
-        self.THRESH = 120
-
         # Set maximum and minimum card area
         self.CARD_AREA_MAX = 1000000
-        self.CARD_AREA_MIN = 1000
+        self.CARD_AREA_MIN = 80
+        
+        # Initialise Blob Detector parameters
+        params = cv.SimpleBlobDetector_Params()
+        # Change thresholds
+        params.minThreshold = 10
+        params.maxThreshold = 200
+        # Filter by Area.
+        params.filterByArea = True
+        params.minArea = 500
+        # Filter by Convexity
+        params.filterByConvexity = True
+        params.minConvexity = 0.40
+        # Filter by Inertia
+        # params.filterByInertia = True
+        # params.minInertiaRatio = 0.01
+        # Create Blob detector with parameters
+        self.blob_detector = cv.SimpleBlobDetector_create(params)
 
     # Preprocess image
-    def preprocess(self, image):
+    def preprocess(self, image, thresh):
         
         # Convert to grayscale
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         # Apply blur
         blur = cv.GaussianBlur(gray, (5,5), 0)
-        
-        # Extract level of background to compute an adaptive threshold
-        bkg_level = gray[0][0]
-        thresh_filter = bkg_level + self.THRESH
 
         # Filter with adaptive threshold
-        _, thresh_img = cv.threshold(blur, thresh_filter, 255, cv.THRESH_BINARY)
+        _, thresh_img = cv.threshold(blur, thresh, 255, cv.THRESH_BINARY)
 
         # Return thresholded image
         return thresh_img
@@ -70,7 +80,7 @@ class Detector:
 
                 # Append to new list
                 card_contours.append(i)
-
+        
         # Reprort number of cards found
         print(len(card_contours), "cards found.")
 
@@ -94,18 +104,73 @@ class Detector:
         # Return new image
         return img
 
+    # 
+    def extract_cards(self, img, contours, idx):
+
+        img_copy = img
+
+        mask = np.zeros_like(img)
+        cv.drawContours(mask, contours, idx, 255, -1)
+        out = np.zeros_like(img)
+        out[mask==255] = img[mask==255]
+
+        (y, x, _) = np.where(mask == 255)
+        (topy, topx) = (np.min(y), np.min(x))
+        (bottomy, bottomx) = (np.max(y), np.max(x))
+        card = img_copy[topy:bottomy+1, topx:bottomx+1]
+
+        return card
+
+    # 
+    def blob_detection(self, img):
+
+        # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        # 
+        keypoints = self.blob_detector.detect(img)
+        # 
+        return keypoints
+
     # Runs the helper functions to detect and extract the cards
     def detect_cards(self, src_img):
 
+        thresh = 160
+
+        img_copy = src_img.copy()
         # Perform image preprocessing
-        img_copy1 = self.preprocess(src_img)
+        img1 = self.preprocess(img_copy, thresh)
         # Detect the contours of cards
-        contours = self.find_cards(img_copy1)
+        contours = self.find_cards(img1)
         
         # Draw contours
-        img_copy2 = cv.drawContours(src_img, contours, -1, (255,0,0), 10)
+        cv.drawContours(img_copy, contours, -1, (255,0,0), 10)
         # Show annotated image
-        cv.imshow("image3", self.scale_img(img_copy2, 50))
+        cv.imshow("contours", self.scale_img(img_copy, 50))
         cv.waitKey(0)
+
+        # 
+        for i in range(len(contours)):
+
+            # if i > 1:
+            #     break
+            # 
+            extracted_card = self.extract_cards(src_img, contours, i)
+            extracted_card = self.scale_img(extracted_card, 300)
+            img2 = self.preprocess(extracted_card, thresh)
+            
+            # 
+            blobs = self.blob_detection(img2)
+
+
+            blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+            # 
+            cv.destroyWindow("card")
+            cv.destroyWindow("blobs")
+            cv.imshow("card", img2)
+            cv.imshow("blobs", blob_img)
+            cv.waitKey(0)
+
+
+
 
         

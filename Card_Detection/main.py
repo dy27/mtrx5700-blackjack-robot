@@ -9,10 +9,27 @@ Info: Run the card detection algorithm.
 """
 
 # Imports
-# from detector import Detector
-from Card_Detector import Card_Detector as Detector
+from Detector import Detector
+# from Card_Detector import Card_Detector as Detector
 import cv2 as cv
 import sys
+
+# Function to scale image
+def scale_img(src_img, scale):
+
+    # Extract image dimensions
+    height = src_img.shape[0]
+    width = src_img.shape[1]
+    
+    # Scale dimensions
+    new_height = int(height * scale/100)
+    new_width = int(width * scale/100)
+    
+    # Resize image
+    img = cv.resize(src_img, (new_width, new_height), interpolation = cv.INTER_AREA)
+    
+    # Return new image
+    return img
 
 # Main function
 if __name__ == "__main__":
@@ -24,8 +41,18 @@ if __name__ == "__main__":
     else:
         # Default image path
         img_path = "Input_Images\\test_01.jpg"
+    
+    # 
+    scale = 1
+    
+    # 
+    img = cv.imread(img_path)
+    # 
+    img = scale_img(img, 100*scale)
 
     # Create card detector
     detector = Detector()
-    img = cv.imread(img_path)
     detector.detect_cards(img)
+
+    # Close all windows
+    cv.destroyAllWindows()

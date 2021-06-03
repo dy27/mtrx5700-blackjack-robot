@@ -22,11 +22,11 @@ class Card_Detector:
     def __init__(self):
         
         # Set value for threshold filter
-        self.THRESH = 120
+        self.THRESH = 200
 
         # Set maximum and minimum card area
         self.CARD_AREA_MAX = 1000000
-        self.CARD_AREA_MIN = 1000
+        self.CARD_AREA_MIN = 50
 
         # 
         self.training_ranks = []
@@ -46,7 +46,8 @@ class Card_Detector:
         # w, h = image.shape[0:2]
         # bkg_level = gray[int(h/100)][int(w/2)]
         bkg_level = gray[0][0]
-        thresh_filter = bkg_level + self.THRESH
+        # thresh_filter = bkg_level + self.THRESH
+        thresh_filter = self.THRESH
 
         # Filter with adaptive threshold
         _, thresh_img = cv.threshold(blur, thresh_filter, 255, cv.THRESH_BINARY)
@@ -101,7 +102,8 @@ class Card_Detector:
             vertices = cv.approxPolyDP(i, 0.01*perimeter, True)
 
             # Check if area is within bounds and contour has 4 vertices
-            if ((size < self.CARD_AREA_MAX) and (size > self.CARD_AREA_MIN) and (len(vertices) == 4)):
+            # if ((size < self.CARD_AREA_MAX) and (size > self.CARD_AREA_MIN) and (len(vertices) == 4)):
+            if ((size < self.CARD_AREA_MAX) and (len(vertices) == 4)):
                 # Append to new list
                 card_contours.append(i)
 
