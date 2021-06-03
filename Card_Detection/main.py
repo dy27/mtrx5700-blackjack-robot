@@ -43,7 +43,7 @@ if __name__ == "__main__":
         img_path = "Input_Images\\test_01.jpg"
     
     # 
-    scale = 3
+    scale = 1
     
     # 
     img = cv.imread(img_path)
@@ -53,6 +53,13 @@ if __name__ == "__main__":
     # Create card detector
     detector = Detector()
     detector.detect_cards(img)
+
+    
+    cv.imshow("original", detector.scale_img(img, 50))
+    # cv.imshow("original", img)
+
+    # detector.check_for_royal(img)
+    # cv.waitKey(0)
 
     # Close all windows
     cv.destroyAllWindows()

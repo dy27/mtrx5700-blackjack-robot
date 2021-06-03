@@ -164,29 +164,34 @@ class Detector:
         hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
         # Check for Red
-        lower_red = np.array([0, 100, 100])
-        upper_red = np.array([5, 255, 255])
+        lower_red = np.array([160, 100, 100])
+        upper_red = np.array([179, 255, 255])
         mask_red = cv.inRange(hsv_img, lower_red, upper_red)
         # Check for Black
         lower_blk = np.array([0, 0, 0])
-        upper_blk = np.array([255, 255, 60])
+        upper_blk = np.array([255, 255, 50])
         mask_blk = cv.inRange(hsv_img, lower_blk, upper_blk)
         # Check for Yellow
         lower_yel = np.array([15, 50, 50])
-        upper_yel = np.array([35, 255, 255])
+        upper_yel = np.array([50, 255, 255])
         mask_yel = cv.inRange(hsv_img, lower_yel, upper_yel)
 
         # out = img[mask==255]
 
-        if (cv.countNonZero(mask_red) != 0) and (cv.countNonZero(mask_blk) != 0) and (cv.countNonZero(mask_yel) != 0):
+        # if (cv.countNonZero(mask_red) != 0) and (cv.countNonZero(mask_blk) != 0) and (cv.countNonZero(mask_yel) != 0):
+        if (cv.countNonZero(mask_red) != 0) and (cv.countNonZero(mask_yel) != 0):
 
             # print("ROYAL")
             royal_flag = True
 
+        
         cv.imshow("royal_red", mask_red)
         cv.imshow("royal_blk", mask_blk)
         cv.imshow("royal_yel", mask_yel)
-        # cv.waitKey(0)
+        # cv.imshow("royal_red", self.scale_img(mask_red, 50))
+        # cv.imshow("royal_blk", self.scale_img(mask_blk, 50))
+        # cv.imshow("royal_yel", self.scale_img(mask_yel, 50))
+        # # cv.waitKey(0)
 
         return royal_flag
 
@@ -209,7 +214,9 @@ class Detector:
 
         # 
         for i in range(len(contours)):
+        # for i in [1, 10, 21, 24, 4, 6, 7, 14, 26, 31]:
         # for i in [4, 6, 7, 14, 26, 31]:
+        # for i in [4, 6, 7]:
 
             # Find centroid of contour
             cnt_centroid = self.find_contour_centroid(contours[i])
@@ -246,6 +253,10 @@ class Detector:
             # Show images
             cv.imshow("card", extracted_card)
             # cv.imshow("blobs", blob_img)
+            
+            # cv2.createTrackbar("Max", "Color Track Bar",0,255,trackChaned)
+            # cv2.createTrackbar("Min", "Color Track Bar",0,255,trackChaned)
+            
             # Wait for keystroke
             cv.waitKey(0)
         
