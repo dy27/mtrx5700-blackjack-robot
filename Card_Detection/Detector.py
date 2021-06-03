@@ -22,18 +22,35 @@ class Detector:
         # Set maximum and minimum card area
         self.CARD_AREA_MAX = 1000000
         self.CARD_AREA_MIN = 80
-        
+
         # Initialise Blob Detector parameters
         params = cv.SimpleBlobDetector_Params()
+        
+        ### ORIGINAL ###
+        # # Change thresholds
+        # params.minThreshold = 10
+        # params.maxThreshold = 200
+        # # Filter by Area
+        # params.filterByArea = True
+        # params.minArea = 500
+        # # Filter by Convexity
+        # params.filterByConvexity = True
+        # params.minConvexity = 0.40
+        # # Filter by Inertia
+        # # params.filterByInertia = True
+        # # params.minInertiaRatio = 0.01
+
+
+        ### EDITS ###
         # Change thresholds
-        params.minThreshold = 10
-        params.maxThreshold = 200
+        params.minThreshold = 100
+        params.maxThreshold = 150
         # Filter by Area.
         params.filterByArea = True
-        params.minArea = 500
+        params.minArea = 900
         # Filter by Convexity
         params.filterByConvexity = True
-        params.minConvexity = 0.40
+        params.minConvexity = 0.50
         # Filter by Inertia
         # params.filterByInertia = True
         # params.minInertiaRatio = 0.01
@@ -124,7 +141,6 @@ class Detector:
     # 
     def blob_detection(self, img):
 
-        # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         # 
         keypoints = self.blob_detector.detect(img)
         # 
@@ -137,8 +153,42 @@ class Detector:
         M = cv.moments(cnt)
         x_c = int(M["m10"] / M["m00"])
         y_c = int(M["m01"] / M["m00"])
-
+        # 
         return (x_c, y_c)
+
+    # 
+    def check_for_royal(self, img):
+
+        royal_flag = False
+
+        hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+
+        # Check for Red
+        lower_red = np.array([0, 100, 100])
+        upper_red = np.array([5, 255, 255])
+        mask_red = cv.inRange(hsv_img, lower_red, upper_red)
+        # Check for Black
+        lower_blk = np.array([0, 0, 0])
+        upper_blk = np.array([255, 255, 60])
+        mask_blk = cv.inRange(hsv_img, lower_blk, upper_blk)
+        # Check for Yellow
+        lower_yel = np.array([15, 50, 50])
+        upper_yel = np.array([35, 255, 255])
+        mask_yel = cv.inRange(hsv_img, lower_yel, upper_yel)
+
+        # out = img[mask==255]
+
+        if (cv.countNonZero(mask_red) != 0) and (cv.countNonZero(mask_blk) != 0) and (cv.countNonZero(mask_yel) != 0):
+
+            # print("ROYAL")
+            royal_flag = True
+
+        cv.imshow("royal_red", mask_red)
+        cv.imshow("royal_blk", mask_blk)
+        cv.imshow("royal_yel", mask_yel)
+        # cv.waitKey(0)
+
+        return royal_flag
 
     # Runs the helper functions to detect and extract the cards
     def detect_cards(self, src_img):
@@ -159,6 +209,7 @@ class Detector:
 
         # 
         for i in range(len(contours)):
+        # for i in [4, 6, 7, 14, 26, 31]:
 
             # Find centroid of contour
             cnt_centroid = self.find_contour_centroid(contours[i])
@@ -170,26 +221,35 @@ class Detector:
             extracted_card = self.extract_cards(src_img, contours, i)
             # Scale image
             extracted_card = self.scale_img(extracted_card, 300)
-            # Preprocess iamge
+            # Preprocess image
             img2 = self.preprocess(extracted_card, thresh)
             
-            # Perform blob detection
-            blobs = self.blob_detection(img2)
-            # Print number of blobs detected
-            print(len(blobs))
+            #
+            royal_flag = self.check_for_royal(extracted_card)
 
-            # Draw blobs
-            blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            if royal_flag:
+                print("Idx: {}, No: {}, Royal: {}".format(i, "N/A", royal_flag))
+            else: 
+                
+                # Perform blob detection
+                blobs = self.blob_detection(img2)
+                # Print number of blobs detected
+
+                # Draw blobs
+                blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+                print("Idx: {}, No: {}, Royal: {}".format(i, len(blobs), royal_flag))
 
             # Refresh windows
             cv.destroyWindow("card")
-            cv.destroyWindow("blobs")
+            # cv.destroyWindow("blobs")
             # Show images
-            cv.imshow("card", img2)
-            cv.imshow("blobs", blob_img)
+            cv.imshow("card", extracted_card)
+            # cv.imshow("blobs", blob_img)
             # Wait for keystroke
             cv.waitKey(0)
-
+        
+        cv.waitKey(0)
 
 
 
