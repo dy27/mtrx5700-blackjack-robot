@@ -56,7 +56,10 @@ class Card_CNN(nn.Module):
 		self.dropout2 = nn.Dropout(p=0.4)
 
 		# Fully connected 1
-		self.fc1 = nn.Linear(256, 52)
+		# self.fc1 = nn.Linear(123904, 13)
+		self.fc1 = nn.Linear(123904, 1200)
+		self.fc2 = nn.Linear(1200, 84)
+		self.fc3 = nn.Linear(84, 11)
 
 	def forward(self, x):
 		out = self.cnn1(x)
@@ -92,5 +95,7 @@ class Card_CNN(nn.Module):
 		# print(out.shape)
 		# Dense
 		out = self.fc1(out)
+		out = self.fc2(out)
+		out = self.fc3(out)
 
 		return out

@@ -14,17 +14,20 @@ import os
 import sys
 
 # Card dictionary to assign integer value from 0 to 51 for cards
-card_dict = {"C01" : 0,  "C02" : 1,  "C03" : 2,  "C04" : 3,  "C05" : 4,  "C06" : 5,  "C07" : 6,
-             "C08" : 7,  "C09" : 8,  "C10" : 9,  "C11" : 10, "C12" : 11, "C13" : 12,
+# card_dict = {"C01" : 0,  "C02" : 1,  "C03" : 2,  "C04" : 3,  "C05" : 4,  "C06" : 5,  "C07" : 6,
+#              "C08" : 7,  "C09" : 8,  "C10" : 9,  "C11" : 10, "C12" : 11, "C13" : 12,
 
-             "D01" : 13, "D02" : 14, "D03" : 15, "D04" : 16, "D05" : 17, "D06" : 18, "D07" : 19,
-             "D08" : 20, "D09" : 21, "D10" : 22, "D11" : 23, "D12" : 24, "D13" : 25,
+#              "D01" : 13, "D02" : 14, "D03" : 15, "D04" : 16, "D05" : 17, "D06" : 18, "D07" : 19,
+#              "D08" : 20, "D09" : 21, "D10" : 22, "D11" : 23, "D12" : 24, "D13" : 25,
              
-             "H01" : 26, "H02" : 27, "H03" : 28, "H04" : 29, "H05" : 30, "H06" : 31, "H07" : 32,
-             "H08" : 33, "H09" : 34, "H10" : 35, "H11" : 36, "H12" : 37, "H13" : 38, 
+#              "H01" : 26, "H02" : 27, "H03" : 28, "H04" : 29, "H05" : 30, "H06" : 31, "H07" : 32,
+#              "H08" : 33, "H09" : 34, "H10" : 35, "H11" : 36, "H12" : 37, "H13" : 38, 
              
-             "S01" : 39, "S02" : 40, "S03" : 41, "S04" : 42, "S05" : 43, "S06" : 44, "S07" : 45,
-             "S08" : 46, "S09" : 47, "S10" : 48, "S11" : 49, "S12" : 50, "S13" : 51}
+#              "S01" : 39, "S02" : 40, "S03" : 41, "S04" : 42, "S05" : 43, "S06" : 44, "S07" : 45,
+#              "S08" : 46, "S09" : 47, "S10" : 48, "S11" : 49, "S12" : 50, "S13" : 51}
+
+card_dict = {"01" : 0,  "02" : 1,  "03" : 2,  "04" : 3,  "05" : 4,  "06" : 5,  "07" : 6,
+             "08" : 7,  "09" : 8,  "10" : 9,  "11" : 10, "12" : 10, "13" : 10}
 
 # Function to create card labels
 def create_labels(folder, file):
@@ -37,11 +40,12 @@ def create_labels(folder, file):
         # Iterate through each file name
         for f in file_list:
             # Extract card value using part of file name as dictionary key
-            card_num = card_dict[f[0:3]]
+            card_num = f[4:6]
             # Create new list combining file name and card number
-            row = [f, card_num]
+            row = [f, card_dict[card_num]]
             # Write row to csv file
             csv_writer.writerows([row])
+            # print(row)
 
 # Main function
 if __name__ == "__main__":
