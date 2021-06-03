@@ -130,6 +130,16 @@ class Detector:
         # 
         return keypoints
 
+    # 
+    def find_contour_centroid(self, cnt):
+        
+        # Computer centre
+        M = cv.moments(cnt)
+        x_c = int(M["m10"] / M["m00"])
+        y_c = int(M["m01"] / M["m00"])
+
+        return (x_c, y_c)
+
     # Runs the helper functions to detect and extract the cards
     def detect_cards(self, src_img):
 
@@ -150,24 +160,34 @@ class Detector:
         # 
         for i in range(len(contours)):
 
-            # if i > 1:
-            #     break
-            # 
+            # Find centroid of contour
+            cnt_centroid = self.find_contour_centroid(contours[i])
+            # Draw centroid 
+            cv.circle(img_copy, cnt_centroid, 15, (0, 0, 255), -1)
+            cv.imshow("contours", self.scale_img(img_copy, 50))
+            
+            # Extract a single card from contours
             extracted_card = self.extract_cards(src_img, contours, i)
+            # Scale image
             extracted_card = self.scale_img(extracted_card, 300)
+            # Preprocess iamge
             img2 = self.preprocess(extracted_card, thresh)
             
-            # 
+            # Perform blob detection
             blobs = self.blob_detection(img2)
+            # Print number of blobs detected
+            print(len(blobs))
 
-
+            # Draw blobs
             blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-            # 
+            # Refresh windows
             cv.destroyWindow("card")
             cv.destroyWindow("blobs")
+            # Show images
             cv.imshow("card", img2)
             cv.imshow("blobs", blob_img)
+            # Wait for keystroke
             cv.waitKey(0)
 
 
