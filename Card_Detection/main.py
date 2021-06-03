@@ -9,7 +9,8 @@ Info: Run the card detection algorithm.
 """
 
 # Imports
-from detector import Detector
+# from detector import Detector
+from Card_Detector import Card_Detector as Detector
 import cv2 as cv
 import sys
 
