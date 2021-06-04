@@ -156,6 +156,26 @@ class Detector:
         # 
         return (x_c, y_c)
 
+    #
+    def check_face_down(self, img):
+
+        face_down_flag = False
+
+        hsv_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+
+        # Check for Blue
+        lower_blue = np.array([100, 50, 50])
+        upper_blue = np.array([130, 255, 255])
+        mask_blue = cv.inRange(hsv_img, lower_blue, upper_blue)
+
+        
+        if (cv.countNonZero(mask_blue) != 0):
+            face_down_flag = True
+
+        cv.imshow("mask_blue", self.scale_img(mask_blue, 100))
+
+        return face_down_flag
+    
     # 
     def check_for_royal(self, img):
 
@@ -185,19 +205,16 @@ class Detector:
             royal_flag = True
 
         
-        cv.imshow("royal_red", mask_red)
-        cv.imshow("royal_blk", mask_blk)
-        cv.imshow("royal_yel", mask_yel)
-        # cv.imshow("royal_red", self.scale_img(mask_red, 50))
-        # cv.imshow("royal_blk", self.scale_img(mask_blk, 50))
-        # cv.imshow("royal_yel", self.scale_img(mask_yel, 50))
-        # # cv.waitKey(0)
+        cv.imshow("mask_red", self.scale_img(mask_red, 100))
+        cv.imshow("mask_blk", self.scale_img(mask_blk, 100))
+        cv.imshow("mask_yel", self.scale_img(mask_yel, 100))
+        # cv.waitKey(0)
 
         return royal_flag
 
     # Runs the helper functions to detect and extract the cards
     def detect_cards(self, src_img):
-
+ 
         thresh = 160
 
         img_copy = src_img.copy()
@@ -213,10 +230,9 @@ class Detector:
         cv.waitKey(0)
 
         # 
-        for i in range(len(contours)):
-        # for i in [1, 10, 21, 24, 4, 6, 7, 14, 26, 31]:
+        # for i in range(len(contours)):
         # for i in [4, 6, 7, 14, 26, 31]:
-        # for i in [4, 6, 7]:
+        for i in [1, 4, 6, 7]:
 
             # Find centroid of contour
             cnt_centroid = self.find_contour_centroid(contours[i])
@@ -230,26 +246,31 @@ class Detector:
             extracted_card = self.scale_img(extracted_card, 300)
             # Preprocess image
             img2 = self.preprocess(extracted_card, thresh)
+
+            # 
+            face_down_flag = self.check_face_down(extracted_card)
+
+            # 
+            if face_down_flag:
+                print("Idx: {}, Face down.".format(i))
             
-            #
-            royal_flag = self.check_for_royal(extracted_card)
+            else:    
+                #
+                royal_flag = self.check_for_royal(extracted_card)
 
-            if royal_flag:
-                print("Idx: {}, No: {}, Royal: {}".format(i, "N/A", royal_flag))
-            else: 
-                
-                # Perform blob detection
-                blobs = self.blob_detection(img2)
-                # Print number of blobs detected
+                if royal_flag:
+                    print("Idx: {}, No: {}, Royal: {}".format(i, "N/A", royal_flag))
+                else: 
+                    
+                    # Perform blob detection
+                    blobs = self.blob_detection(img2)
+                    # Print number of blobs detected
 
-                # Draw blobs
-                blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+                    # Draw blobs
+                    blob_img = cv.drawKeypoints(extracted_card.copy(), blobs, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-                print("Idx: {}, No: {}, Royal: {}".format(i, len(blobs), royal_flag))
+                    print("Idx: {}, No: {}, Royal: {}".format(i, len(blobs), royal_flag))
 
-            # Refresh windows
-            cv.destroyWindow("card")
-            # cv.destroyWindow("blobs")
             # Show images
             cv.imshow("card", extracted_card)
             # cv.imshow("blobs", blob_img)
@@ -259,6 +280,13 @@ class Detector:
             
             # Wait for keystroke
             cv.waitKey(0)
+            # Clear images
+            cv.destroyWindow("card")
+            cv.destroyWindow("mask_red")
+            cv.destroyWindow("mask_blk")
+            cv.destroyWindow("mask_yel")
+            cv.destroyWindow("mask_blue")
+            # cv.destroyWindow("blobs")
         
         cv.waitKey(0)
 

@@ -43,7 +43,7 @@ if __name__ == "__main__":
         img_path = "Input_Images\\test_01.jpg"
     
     # 
-    scale = 1
+    scale = 3
     
     # 
     img = cv.imread(img_path)
