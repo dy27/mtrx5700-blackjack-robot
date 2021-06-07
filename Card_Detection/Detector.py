@@ -168,8 +168,12 @@ class Detector:
         upper_blue = np.array([130, 255, 255])
         mask_blue = cv.inRange(hsv_img, lower_blue, upper_blue)
 
+        # Count masked pixels
+        num_white_px = np.sum(img == 255)
         
-        if (cv.countNonZero(mask_blue) != 0):
+        if (num_white_px > 2000):
+            
+            # print(number_of_white_pix)
             face_down_flag = True
 
         cv.imshow("mask_blue", self.scale_img(mask_blue, 100))
