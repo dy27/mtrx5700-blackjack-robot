@@ -178,22 +178,6 @@ class MotionPlanner:
 
         for point, use_runway, flip in zip(points, use_runway_list, flip_card_list):
 
-            
-            # self.move_to_table_point([0.05,0.05,0.05], end_effector_offset=EndEffectorOffset.CARD_GRIP,
-            #                                         direction='left', angle_deg=30, linear=False)
-            # DEBUG('reached origin')
-
-            # self.move_to_table_point([0.05,0.05,0.0-self.penetration], end_effector_offset=EndEffectorOffset.CARD_GRIP,
-            #                                         direction='left', angle_deg=30, linear=True)
-            # DEBUG('reached origin')
-
-            # self.move_to_table_point([0.05,0.4,0.0-self.penetration], end_effector_offset=EndEffectorOffset.CARD_GRIP,
-            #                                         direction='left', angle_deg=30, linear=True)
-            # DEBUG('reached origin')
-
-            
-            # while True:
-
             # Move to above shoe
             table_point = [self.shoe_position[0], self.shoe_position[1], self.shoe_position[2] + self.clearance]
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
@@ -206,11 +190,6 @@ class MotionPlanner:
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=0, linear=True)
             DEBUG('starting dealing')
-
-            # # Change angle
-            # self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-            #                                         direction='left', angle_deg=30, linear=True)
-            # DEBUG('starting dealing')
 
             # Extraction step 1
             table_point[0] += 0.02

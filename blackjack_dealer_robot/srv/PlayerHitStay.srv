@@ -1,0 +1,4 @@
+int64 player_id
+int64 action
+---
+bool success

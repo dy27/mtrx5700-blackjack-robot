@@ -1,0 +1,3 @@
+int64 player_id
+---
+int64 balance
