@@ -1,0 +1,6 @@
+int64 player_id
+bool join
+int64 initial_balance
+---
+bool success
+int64 updated_balance

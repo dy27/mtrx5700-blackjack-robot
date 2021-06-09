@@ -1,0 +1,5 @@
+int64 player_id
+int64 bet_size
+---
+bool success
+int64 updated_balance
