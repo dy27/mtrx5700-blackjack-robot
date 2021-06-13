@@ -61,30 +61,18 @@ class Timer:
 class BlackjackGame:
 
     def fake_card_update_callback(self):
-        if self.game_status == GameStatus.WAITING_FOR_CARD_DETECTIONS:
-            for player in self.player_list:
-                if player is not None:
-                    for card in player.hand:
-                        if not card.detected:
-                            card.detected = True
-                            card.value = 2
-                            player.update_hand_value()
-
-        for card in self.dealer.hand:
-            if not card.detected:
-                card.detected = True
-                card.value = 2
-                self.dealer.update_hand_value()
+        pass
 
     def fake_add_players(self):
         pass
 
     def fake_set_bets(self):
-        for player in self.player_list:
-            player.bet = 10
+        # for player in self.player_list:
+        #     player.bet = 10
+        pass
 
     # Class constructor
-    def __init__(self, max_players, action_client=None, game_status_pub=None):
+    def __init__(self, max_players, action_client, detection_client=None):
 
         self.max_players = max_players
 
@@ -97,7 +85,7 @@ class BlackjackGame:
         self.player_list = [None] * max_players
 
         # Set deck
-        self.deck = BlackjackDeck(100)
+        self.deck = BlackjackDeck(200)
 
         # Set value for blackjack
         self.blackjack_value = 21
@@ -106,7 +94,7 @@ class BlackjackGame:
         self.play_flag = True
 
         self.action_client = action_client
-        self.game_status_pub = game_status_pub
+        self.detection_client = detection_client
 
         self.bet_timer = Timer(10)
         self.action_timer = Timer(10)
@@ -114,7 +102,7 @@ class BlackjackGame:
         self.card_shape = (0.064, 0.089)
         self.card_spacing = (0.015, 0.015)
 
-        self.first_coord = (0.07, 0.07)
+        self.first_coord = (0.09, 0.07)
         self.board_size = (0.9, 0.6)
 
         self.player_coordinates = self.generate_player_coordinates()
@@ -129,32 +117,93 @@ class BlackjackGame:
         print("--------------------------------------------------\n")
 
 
-
     def update_card_values(self):
         """Go through recognised cards then update the hand values of players"""
 
-        for i in range(len(photo_coords)):
-            closestIndices = [0,0]
-            closestDistance = 1
-            card = photo_coords[i]
+        goal = blackjack_dealer_robot.msg.DealerGoal()
+        goal.type = 3
+        self.action_client.send_goal(goal)
+        self.action_client.wait_for_result()
+        result = self.action_client.get_result()
+        # print("MOVED BACK TO SHOE", result)
 
-            for j in range(len(self.player_list)):
-                if self.player_list[j] != None:
-                    player_cards = self.player_card_coordinates[j]
 
-                    for k in range(len(self.player_list[j])):
-                        player_card = player_cards[k]
+        goal = blackjack_dealer_robot.msg.DetectCardsGoal()
+        self.detection_client.send_goal(goal)
+        self.detection_client.wait_for_result()
+        result = self.detection_client.get_result()
+        # print("RESULT RECEIVED", result)
 
-                        if self.player_list[j][k].detected == True:
-                            continue    
+        card_values = [result.detections[i].value for i in range(len(result.detections))]
+        card_points = []
+        for i in range(len(result.detections)):
+            card_point = [result.detections[i].card_point.x, result.detections[i].card_point.y]
+            card_points.append(card_point)
 
-                        if ((player_card[0] - card[0])**2 + (player_card[1] - card[1])**2)**0.5 < closestDistance:
-                            closestDistance = ((player_card[0] - card[0])**2 + (player_card[1] - card[1])**2)**0.5
-                            closestIndices = [j,k]
+
+        for player in self.player_list:
+            if player is not None:
+                for j in range(len(player.hand)):
+                    card = player.hand[j]
+                    if not card.detected:
+                        min_dist = 100000
+                        min_val = None
+                        for i in range(len(card_points)):
+                            card_point = card_points[i]
+                       
+                            expected_coords = self.player_card_coordinates[player.player_id][j]
+                            # print('expected coords:', expected_coords)
+                            dist = ( (expected_coords[0] - card_point[0])**2 + (expected_coords[1] - card_point[1])**2 )**0.5
+                            if dist < min_dist:
+                                min_dist = dist
+                                min_val = card_values[i]
+
+                        card.detected = True
+                        card.value = min_val
+
+        for j in range(len(self.dealer.hand)):
+            card = self.dealer.hand[j]
+            if not card.detected:
+                min_dist = 100000
+                min_val = None
+                for i in range(len(card_points)):
+                    card_point = card_points[i]
+                
+                    expected_coords = self.dealer_card_coordinates[j]
+                    # print('expected coords:', expected_coords)
+                    dist = ( (expected_coords[0] - card_point[0])**2 + (expected_coords[1] - card_point[1])**2 )**0.5
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_val = card_values[i]
+                card.detected = True
+                card.value = min_val
+                    
+
+        # for i in range(len(card_points)):
+        #     closestIndices = [0,0]
+        #     closestDistance = 1
+        #     card = card_points[i]
+
+        #     for j in range(len(self.player_list)):
+        #         if self.player_list[j] != None:
+        #             player_cards = self.player_card_coordinates[j]
+
+        #             for k in range(len(self.player_list[j])):
+        #                 player_card = player_cards[k]
+
+        #                 if len(self.player_list[j].hand) <= k:
+        #                     continue
+
+        #                 if (self.player_list[j].hand)[k].detected == True:
+        #                     continue    
+
+        #                 if ((player_card[0] - card[0])**2 + (player_card[1] - card[1])**2)**0.5 < closestDistance:
+        #                     closestDistance = ((player_card[0] - card[0])**2 + (player_card[1] - card[1])**2)**0.5
+        #                     closestIndices = [j,k]
                         
-            self.player_list[j].hand[k].value = recognised_cards[i]
-            self.player_list[j].hand[k].coords = [card[0], card[1]]
-            self.player_list[j].hand[k].detected = True
+        #     self.player_list[j].hand[k].value = recognised_cards[i]
+        #     self.player_list[j].hand[k].coords = [card[0], card[1]]
+        #     self.player_list[j].hand[k].detected = True
         
         for player in self.player_list:
             if player != None:
@@ -171,8 +220,8 @@ class BlackjackGame:
 
         player_width  = (3*self.card_shape[0] + 2*self.card_spacing[0])
         player_spacing = (width - 3 * player_width)/2
-        print(player_width)
-        print(player_spacing)
+        # print(player_width)
+        # print(player_spacing)
 
         for i in range(1, self.max_players):
             x_displacement = i * (player_spacing + player_width)
@@ -192,6 +241,8 @@ class BlackjackGame:
             for j in range(6):
                     card_locs[i][j] = [player_pos[0] + (j % 3) * (self.card_shape[0] + self.card_spacing[0]),
                     player_pos[1] + (j // 3) * (self.card_shape[1] + self.card_spacing[1])]
+
+        return card_locs
         
 
     # Deal first cards of player, then dealer first cards face up, then players' second cards, then dealers 2nd face down 
@@ -202,9 +253,10 @@ class BlackjackGame:
             for player in self.player_list:
                 if player != None:
                     self.deal_to_person(player)   
-                    print()
+                    # print("DEALT TO ONE PERSON")
             
             self.deal_to_person(self.dealer)
+            # print("DEALT TO DEALER")
         
         # DEAL UNFLIPPED CARD TO DEALER
         # CARD GETS FLIPPED IN FINISH DEALER HAND FUNCTION
@@ -213,27 +265,33 @@ class BlackjackGame:
     # Deal to a person (dealer or player)
     def deal_to_person(self, person):
 
+        # if self.action_client is not None:
+        # print("ACTION")
         flip = True
 
         # Location for robot to distribute card to 
-        if person.id == -1:
+        if person.player_id == -1:
+            # print("dealing to dealer")
             card_target_location = self.dealer_card_coordinates[len(person.hand)]
 
             # Dealer's second card should not be flipped
             if len(person.hand) == 1:
                 flip = False
-        else:
+        else:            
             card_target_location = self.player_card_coordinates[person.player_id][len(person.hand)]
 
-        if self.action_client is not None:
-            goal = blackjack_dealer_robot.msg.DealerGoal()
-            goal.type = 0
-            point_msg = geometry_msgs.msg.Point()
-            point_msg.x, point_msg.y, point_msg.z = card_target_location[0], card_target_location[1], 0.0
-            goal.use_runway_list = [True]
-            goal.flip_card_list = [True]
-            self.action_client.send_goal(goal)
-            self.action_client.wait_for_result()
+        goal = blackjack_dealer_robot.msg.DealerGoal()
+        goal.type = 0
+        point_msg = geometry_msgs.msg.Point()
+        point_msg.x, point_msg.y, point_msg.z = card_target_location[0], card_target_location[1], 0.0
+        goal.card_points = [point_msg]
+        goal.use_runway_list = [True]
+        goal.flip_card_list = [flip]
+        self.action_client.send_goal(goal)
+        # print("SENT GOAL")
+        self.action_client.wait_for_result()
+        # print("RECEIVED RESULT")
+
 
         # Add card person's hand
         person.add_card_to_hand(self.deck.deck[0])
@@ -304,9 +362,15 @@ class BlackjackGame:
                     # Execute player action
                     self.execute_player_action(player)
 
-                    while not self.all_cards_detected():
-                        rospy.sleep(0.5)
-                        self.fake_card_update_callback()
+                    if player.action == 'h':
+                        player.action = None
+
+                    # while not self.all_cards_detected():
+                    #     rospy.sleep(0.5)
+                        
+                    self.update_card_values()
+                    self.fake_card_update_callback()
+
 
 
     # Execute player action
@@ -345,21 +409,49 @@ class BlackjackGame:
 
 
     def finish_dealer_hand(self):
-        # FLIP UNFLIPPED CARD AND UPDATE VALUES
-        goal = blackjack_dealer_robot.msg.DealerGoal()
-        goal.type = 2
-        points = [[0.46, 0.4, 0]]
-        self.action_client.send_goal(goal)
-        self.action_client.wait_for_result()
-        result = self.action_client.get_result()
-        print("RESULT RECEIVED", result)
+        self.print_game()
+
+        # FLIP UNFLIPPED CARD AND UPDATE VALUES        
+        if self.action_client is not None:
+            goal = blackjack_dealer_robot.msg.DealerGoal()
+            goal.type = 2
+            # goal.points = [[0.46, 0.4, 0]]
+            point = geometry_msgs.msg.Point()
+            point.x, point.y, point.z = self.dealer_card_coordinates[1][0], self.dealer_card_coordinates[1][1], 0
+            goal.card_points = [point]
+            self.action_client.send_goal(goal)
+            self.action_client.wait_for_result()
+            result = self.action_client.get_result()
+            # print("RESULT RECEIVED", result)
+            try:
+                for i in range(2):
+                    self.dealer.hand[i].detected = False
+            except:
+                pass
+            self.update_card_values()
+            self.dealer.update_hand_value()
 
 
+
+        first = True
         while self.dealer.value < 17:
+            self.print_game()
             self.deal_to_person(self.dealer)
+            
+            if first:
+                try:
+                    for i in range(2):
+                        self.dealer.hand[i].detected = False
+                except:
+                    pass
+            first = False
+            
             while not self.all_cards_detected():
                 rospy.sleep(0.5)
                 self.fake_card_update_callback()
+                self.update_card_values()
+
+            self.dealer.update_hand_value()
             # CALL UPDATE CARD VALUES AFTER EACH CARD IS DEALT
 
 
@@ -371,46 +463,47 @@ class BlackjackGame:
             
             if player != None:
                 if player.bust:
-                    print("{}, you have gone bust. You lose your bet of ${}.".format(player.id, player.bet))
+                    print("{}, you have gone bust. You lose your bet of ${}.".format(player.player_id, player.bet))
                     player.bet = 0
 
                 elif player.value > self.dealer.value or self.dealer.value > self.blackjack_value:
                     if player.value == 21:
-                        print("Congrats {}, you got blackjack. You win a 3:2 payout of ${}.".format(player.id, 1.5 * player.bet))
+                        print("Congrats {}, you got blackjack. You win a 3:2 payout of ${}.".format(player.player_id, 1.5 * player.bet))
                         player.wallet += player.bet * 2.5 
                     else:
-                        print("Congrats {}, you beat the dealer. You win a 1:1 payout of ${}.".format(player.id, player.bet))
+                        print("Congrats {}, you beat the dealer. You win a 1:1 payout of ${}.".format(player.player_id, player.bet))
                         player.wallet += player.bet * 2
                     player.bet = 0
 
                 elif player.value < self.dealer.value:
-                    print("Unlucky {}, the dealer beat you. You lose your bet of ${}.".format(player.id, player.bet))
+                    print("Unlucky {}, the dealer beat you. You lose your bet of ${}.".format(player.player_id, player.bet))
                     player.bet = 0
 
                 else:
-                    print("{}, you tied with the dealer. You get your bet back.".format(player.id))
+                    print("{}, you tied with the dealer. You get your bet back.".format(player.player_id))
                     player.wallet += player.bet
                     player.bet = 0
                     
                 print("You now have a bankroll of ${}.\n".format(player.wallet))
                 if player.wallet == 0:
-                    print(player.id + ", you no longer have any money left in your bankroll, you will be removed from the table\n")
+                    print(player.player_id + ", you no longer have any money left in your bankroll, you will be removed from the table\n")
                     
-        new_player_list = [x for x in self.player_list if (x != None and x.wallet > 0)]
-        self.player_list = new_player_list
+        # new_player_list = [x for x in self.player_list if (x != None and x.wallet > 0)]
+        # self.player_list = new_player_list
 
 
     def add_player(self, player_index, player_balance):
-        if self.game_status == GameStatus.WAITING_FOR_PLAYERS or self.game_status == GameStatus.WAITING_FOR_BETS:
+        # if self.game_status == GameStatus.WAITING_FOR_PLAYERS or self.game_status == GameStatus.WAITING_FOR_BETS:
 
-            if self.player_list[player_index] is not None:
-                return False
-            
-            self.player_list[player_index] = BlackjackPlayer(player_index, player_balance, table_coordinate=self.player_coordinates[player_index])
-            return True
+        # if self.player_list[player_index] is not None:
+        #     return False
+        
+        self.player_list[player_index] = BlackjackPlayer(player_index, player_balance, table_coordinate=self.player_coordinates[player_index])
+        rospy.sleep(0.1)
+        return True
 
-        else:
-            return False
+        # else:
+        #     return False
 
 
     def get_player_count(self):
@@ -423,18 +516,20 @@ class BlackjackGame:
 
     def wait_for_bets(self):
         self.game_status = GameStatus.WAITING_FOR_BETS
+        print("Waiting for bets.")
         # self.bet_timer.start()
         # while not self.bet_timer.is_finished() and not self.all_bets_placed():
         #     rospy.sleep(0.5)
-        print("Waiting for bets...")
         while not self.all_bets_placed():
             rospy.sleep(0.5)
+
+        print("All bets have been placed.")
         
 
     def all_bets_placed(self):
         """Returns true if all players in the game have placed their bets"""
         for player in self.player_list:
-            if player is not None and player.bet is None:
+            if player is not None and player.bet == 0:
                 return False
         return True
 
@@ -445,7 +540,18 @@ class BlackjackGame:
                 for card in player.hand:
                     if not card.detected:
                         return False
+        for card in self.dealer.hand:
+            if not card.detected:   
+                return False
         return True
+
+
+    def print_game(self):
+        print(self.player_list)
+        for player in self.player_list:
+            if player is not None:
+                player.print_hand()
+        self.dealer.print_hand()
 
 
     def play_game(self):
@@ -457,15 +563,23 @@ class BlackjackGame:
             self.wait_for_bets()
 
             self.deal_initial_cards()
+            print("initial cards dealt")
 
             while self.play_flag:
 
-                while not self.all_cards_detected():
-                    rospy.sleep(0.5)
-                    self.fake_card_update_callback()
+                self.print_game()
+
+                # while not self.all_cards_detected():
+                #     rospy.sleep(0.5)
+                    
+                self.update_card_values()
+                self.fake_card_update_callback()
+
+                self.print_game()
 
                 # Check players's hand values
                 continue_flag = self.check_values()
+                # print('continue_flag:', continue_flag)
 
                 # If game can continue
                 if continue_flag:
@@ -478,6 +592,8 @@ class BlackjackGame:
                     # Break from loop
                     break
 
+                self.print_game()
+
             # REMEMBER TO FLIP FACE DOWN CARD FIRST IN IT
             self.finish_dealer_hand()
 
@@ -486,86 +602,54 @@ class BlackjackGame:
             
             # Process players leaving
 
+            goal = blackjack_dealer_robot.msg.DealerGoal()
+            goal.type = 1
+            clear_points = [[0.09, 0.07, 0]]
+            for x, y, z in clear_points:
+                point_msg = geometry_msgs.msg.Point()
+                point_msg.x, point_msg.y, point_msg.z = x, y, z
+                goal.card_points.append(point_msg)
+            self.action_client.send_goal(goal)
+            self.action_client.wait_for_result()
+            # result = client.get_result()
+            # print("RESULT RECEIVED", result)
+
+            flag = False
+            for player in self.player_list:
+                if player is not None:
+                    if len(player.hand) > 3:
+                        flag = True
+                        break
+            if flag:
+                goal = blackjack_dealer_robot.msg.DealerGoal()
+                goal.type = 1
+                clear_points = [[0.09, 0.174, 0]]
+                for x, y, z in clear_points:
+                    point_msg = geometry_msgs.msg.Point()
+                    point_msg.x, point_msg.y, point_msg.z = x, y, z
+                    goal.card_points.append(point_msg)
+                self.action_client.send_goal(goal)
+                self.action_client.wait_for_result()
+
+            goal = blackjack_dealer_robot.msg.DealerGoal()
+            goal.type = 1
+            clear_points = [[0.2, 0.4, 0]]
+            for x, y, z in clear_points:
+                point_msg = geometry_msgs.msg.Point()
+                point_msg.x, point_msg.y, point_msg.z = x, y, z
+                goal.card_points.append(point_msg)
+            self.action_client.send_goal(goal)
+            self.action_client.wait_for_result()
+
             # Kick 
             for i in range(len(self.player_list)):
                 if self.player_list[i] != None:
-                    print(self.player_list[i].name + ": " + str(self.player_list[i].wallet))
+                    print(str(self.player_list[i].player_id) + ": " + str(self.player_list[i].wallet))
                     if self.player_list[i].wallet <= 0:
                         self.player_list[i] = None
                     else:
                         self.player_list[i].reset()
             self.dealer.reset()
             self.play_flag = True
-
-            # active_players = max(self.update_players(),active_players)
-
-        # active_players = 0
-        # print("Players on table:")
-        # for player in self.player_list:
-        #     if player != None:
-        #         if player.wallet > 0:
-        #             print(str(player.id) + ": " + str(player.wallet))
-        #             active_players += 1
-
-        # while active_players > 0:
-        #     self.get_wagers()
-        #     print()
-
-        #     # Deal initial cards
-        #     self.deal_initial_cards()
-        #     print()
-
-        #     # While play can continue
-        #     while self.play_flag:
-
-        #         # Check players's hand values
-        #         continue_flag = self.check_values()
-
-        #         # If game can continue
-        #         if continue_flag:
-                    
-        #             # WILL NEED TO CHANGE
-        #             # Get player input
-        #             self.get_player_input()
-
-
-        #         else:
-        #             # Clear flag
-        #             self.play_flag = False
-        #             # Break from loop
-        #             break
-
-        #     # REMEMBER TO FLIP FACE DOWN CARD FIRST IN IT
-        #     self.finish_dealer_hand()
-
-        #     # Reveal dealer cards and determine winner
-        #     self.final_reveal()
-
-        #     print("New round\n")
-
-        #     # DAVIDS PLAYER UPATE STUFF
-        #     active_players = 0
-        #     print("Players on table:")
-        #     for i in range(len(self.player_list)):
-        #         if self.player_list[i] != None:
-        #             print(self.player_list[i].name + ": " + str(self.player_list[i].wallet))
-        #             if self.player_list[i].wallet > 0:
-        #                 active_players += 1
-        #             else:
-        #                 self.player_list[i] = None
-        #             player.reset()
-
-        #     self.dealer.reset()
-
-        #     print()
-        #     self.play_flag = True
-
-        #     active_players = max(self.update_players(),active_players)
-            
-
-        # # Print message
-        # print("[GAME]: Game over.")
-
-
 
 

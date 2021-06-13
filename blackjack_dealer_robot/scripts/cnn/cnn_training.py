@@ -19,18 +19,9 @@ from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
-from custom_dataset import Custom_Dataset
-from CardCNN import CardCNN
+from cnn.custom_dataset import Custom_Dataset
+from cnn.card_cnn import CardCNN
 
-train_imgs = os.path.join("card_dataset", "train_val_data")
-train_labs = os.path.join("card_dataset", "binary_train_val.csv")
-valid_imgs = os.path.join("card_dataset", "testing_data")
-valid_labs = os.path.join("card_dataset", "binary_test.csv")
-
-# Hyperparameters
-BATCH_SIZE = 32
-NUM_EPOCHS = 30
-LEARNING_RATE = 1e-3
 
 # Transform to use when evaluating model
 custom_transform = transforms.Compose([	transforms.ToPILImage(),
@@ -51,6 +42,16 @@ train_transform = transforms.Compose([	transforms.ToPILImage(),
                                         transforms.ToTensor(),
                                         transforms.Normalize((0.5, ), (0.5, )),
                                        ])
+
+train_imgs = os.path.join("card_dataset", "train_val_data")
+train_labs = os.path.join("card_dataset", "binary_train_val.csv")
+valid_imgs = os.path.join("card_dataset", "testing_data")
+valid_labs = os.path.join("card_dataset", "binary_test.csv")
+
+# Hyperparameters
+BATCH_SIZE = 32
+NUM_EPOCHS = 30
+LEARNING_RATE = 1e-3
 
 # Define the dataloaders
 # -----------------------

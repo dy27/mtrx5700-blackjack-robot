@@ -40,7 +40,7 @@ class BlackjackPlayer:
 
 
         # Print message
-        print("[INFO]: Player, {}, created.\n".format(self.name))
+        # print("[INFO]: Player, {}, created.\n".format(self.name))
 
     def reset(self):
         self.hand = []
@@ -49,15 +49,15 @@ class BlackjackPlayer:
         self.bet = 0
         self.action = None
 
-    def get_bet(self):
-        while(True):
-            bet_size = int(input(self.name + " how much would you like to bet, you have ${} remaing: ".format(self.wallet)))
-            if bet_size > self.wallet or bet_size <= 0:
-                print("Invalid Bet, please bet a different amount")
-            else:
-                break
-        self.wallet -= bet_size
-        self.bet = bet_size
+    # def get_bet(self):
+    #     while(True):
+    #         bet_size = int(input(str(self.player_id) + " how much would you like to bet, you have ${} remaing: ".format(self.wallet)))
+    #         if bet_size > self.wallet or bet_size <= 0:
+    #             print("Invalid Bet, please bet a different amount")
+    #         else:
+    #             break
+    #     self.wallet -= bet_size
+    #     self.bet = bet_size
     # Add a card to player's hand
     
     def add_card_to_hand(self, card):
@@ -80,6 +80,9 @@ class BlackjackPlayer:
             # Cumulatively add value of cards in hand
             if card.value == 11:
                 ace_count += 1
+
+            if card.value is None:
+                card.value = 0
             total = total + card.value
 
         # Save value
@@ -97,26 +100,26 @@ class BlackjackPlayer:
             print("Black Jack!")
         
 
-    # Take player input
-    def take_input(self):
+    # # Take player input
+    # def take_input(self):
         
-        # Receive input
-        self.action = input("[GAME]: {}, would you like to HIT (h) or STAY (s)? ".format(self.name))
+    #     # Receive input
+    #     self.action = input("[GAME]: {}, would you like to HIT (h) or STAY (s)? ".format(self.name))
 
 
     # Print cards held in hand
     def print_hand(self):
         
         # Get list of card names
-        cards_list = [card.name for card in self.hand]
+        cards_list = [str(card.value) for card in self.hand]
         # Print list
-        print("[{}]: Hand: {}; Value:{}".format(self.name, cards_list, self.value))
+        print("[{}]: Hand: {}; Value:{}".format(self.player_id, cards_list, self.value))
 
     # Print message if blackjack is achieved
     def print_blackjack_msg(self):
 
         # Print message
-        print("[{}]: Blackjack!".format(self.name))
+        print("[{}]: Blackjack!".format(self.player_id))
 
     # Print message if player wins
     def print_win_msg(self):
@@ -124,7 +127,7 @@ class BlackjackPlayer:
         # Set win flag
         self.winner = True 
         # Print message
-        print("[{}]: Wins!".format(self.name))
+        print("[{}]: Wins!".format(self.player_id))
 
     # Print message if player loses
     def print_lose_msg(self):
@@ -132,6 +135,6 @@ class BlackjackPlayer:
         # Clear win flag
         self.winner = False
         # Print message
-        print("[{}]: Loses!".format(self.name))
+        print("[{}]: Loses!".format(self.player_id))
 
     

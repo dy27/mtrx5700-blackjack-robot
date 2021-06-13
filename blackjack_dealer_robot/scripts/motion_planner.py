@@ -5,28 +5,22 @@ import sys
 import actionlib
 import math
 import numpy as np
-import tf2_ros
 import tf2_geometry_msgs    
-
-from std_msgs.msg import Int32
 
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 import blackjack_dealer_robot.msg
 
 import geometry_msgs
-from geometry_msgs.msg import PoseStamped
-# from geometry_msgs.msg import Pose
 
 import moveit_commander
 import moveit_msgs.msg
-from moveit_commander.conversions import pose_to_list
 
 import copy
 
 DEBUG_MODE = False
 
-def DEBUG(message):
+def DEBUG(message=""):
     if DEBUG_MODE:
         print(message)
         raw_input("Press Enter to continue...")
@@ -50,27 +44,9 @@ class MotionPlanner:
         # Initialise the ROS node
         rospy.init_node('motion_planner')
 
-        # Set up transform listener
-        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) #tf buffer length
-        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
-
-        # Get the transform from the table to base_link
-        # self.transform = None
-        # while self.transform is None:
-        #     try:
-        #         transform = tf_buffer.lookup_transform('base_link',
-        #                                             'table', #source frame
-        #                                             rospy.Time(0), #get the tf at first available time
-        #                                             rospy.Duration(1.0)) #wait for 1 second
-        #         self.transform = transform
-        #     except:
-        #         print("Failed")
-        #         rospy.sleep(1)
-
-
         # Action server return message
-        self.action_result = Int32()
-        self.action_result.data = 1
+        self.action_result = blackjack_dealer_robot.msg.DealerResult()
+        # self.action_result.data = 1
 
         # Set up action server
         self.action_name = 'dealer_action'
@@ -80,25 +56,28 @@ class MotionPlanner:
                                                         auto_start=False)
         self.action_server.start()
 
-
-
-        self.shoe_position = [0.208, 0.54, 0.03]
-
+        # The translation offset from the robot arm coordinate system to the table coordinate system
         self.table_offset = [-0.525, 0.675, 0.012]
-        # self.table_offset = [-0.45, 0.9, 0.0]
 
+        # Width and height of the game table
         self.table_shape = (0.9, 0.6)
 
+        # Height above the table which the end effector should move at
         self.clearance = 0.05
+
+        # The allowable depth that the end effector can push into the table
         self.penetration = 0.0075
 
+        # y coordinate value of the card runway in table coordinates
         self.card_runway_y = 0.29
 
+        # Width and height of a card
         self.card_shape = (0.064, 0.089)
+
+        # The card extraction point on the shoe in table coordinates
+        self.shoe_position = [0.208, 0.54, 0.03]
+
         
-
-
-
         # First initialize moveit_commander and a rospy node:
         moveit_commander.roscpp_initialize(sys.argv)
         # rospy.init_node('build_tower_node', anonymous=True)
@@ -142,6 +121,8 @@ class MotionPlanner:
 
     
     def table_to_robot_transform(self, table_point):
+        """Transform a coordinate in the table coordinate system to a point in the
+        robot arm's coordinate system"""
         table_x, table_y, table_z = table_point
 
         robot_x = table_x + self.table_offset[0]
@@ -152,7 +133,9 @@ class MotionPlanner:
 
 
     def execute_callback(self, goal):
-        print("EXECUTE CALLBACK")
+        """Execution callback for the action server."""
+
+        print("EXECUTE CALLBACK", goal.type)
             
         if goal.type == ActionType.DEAL:
             self.deal_cards(goal.card_points, goal.use_runway_list, goal.flip_card_list)
@@ -161,18 +144,21 @@ class MotionPlanner:
             self.clear_cards(goal.card_points)
 
         elif goal.type == ActionType.MOVE:
-            self.move_eef_to_pose(goal.pose)
+            self.move_to_table_point([self.shoe_position[0], self.shoe_position[1], self.shoe_position[2]+0.1])
 
         elif goal.type == ActionType.FLIP:
             for p in goal.card_points:
                 self.flip_card([p.x, p.y, p.z])
+        else:
+            print("NO ACTION")
 
         self.action_server.set_succeeded(self.action_result)
 
 
     def deal_cards(self, points, use_runway_list, flip_card_list):
+        """Executes a card dealing motion sequence, dealing cards to the list of points specified. """
 
-        DEBUG('starting dealing')
+        DEBUG()
 
         pose_waypoints = []
 
@@ -182,21 +168,21 @@ class MotionPlanner:
             table_point = [self.shoe_position[0], self.shoe_position[1], self.shoe_position[2] + self.clearance]
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=0, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
             # Contact card
             self.penetration += 0.0025
             table_point[2] -= self.clearance + self.penetration
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=0, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
             # Extraction step 1
             table_point[0] += 0.02
             table_point[2] -= 0.0228
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=15, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
             # Extraction step 2
             self.penetration -= 0.0025
@@ -204,22 +190,24 @@ class MotionPlanner:
             table_point[2] -= 0.0072
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=30, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
             # Extraction step 3
             table_point[0] += 0.05
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=30, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
-
+            # Slide card up to runway
             table_point[1] = self.card_runway_y
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=30, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
+
 
             if flip:
-                card_shift = 0.000
+                # The distance that the card shifts when flipped, should be 0 if there is sufficient friction
+                card_shift = 0.000  
 
                 # Don't move card into place if the target position is too close to the left edge
                 if point.x - (self.card_shape[0] + card_shift) >= 0.05:
@@ -227,7 +215,7 @@ class MotionPlanner:
                     table_point[0] = point.x - (self.card_shape[0] + card_shift)
                     self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                             direction='left', angle_deg=15, linear=True)
-                    DEBUG('starting dealing')
+                    DEBUG()
 
                 # Flip card
                 table_point = self.flip_card(table_point, card_shift=card_shift)
@@ -236,57 +224,64 @@ class MotionPlanner:
                 table_point[2] = self.clearance
                 self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                         direction='left', angle_deg=30, linear=True)
-                DEBUG('starting dealing')
+                DEBUG()
 
                 # Regrip card
                 table_point[2] = -self.penetration
                 self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                         direction='left', angle_deg=30, linear=True)
-                DEBUG('starting dealing')
+                DEBUG()
 
                 # Adjust card position if necessary
                 if table_point[0] != point.x:
                     table_point[0] = point.x
                     self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                             direction='left', angle_deg=30, linear=True)
-                    DEBUG('starting dealing')
+                    DEBUG()
 
             else:
                 # Move to target x value
                 table_point[0] = point.x
                 self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                         direction='left', angle_deg=30, linear=True)
-                DEBUG('starting dealing')
+                DEBUG()
 
             # Move to target y value
             table_point[1] = point.y
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=30, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
-            # Move up 
+            # Move end effector up to release card
             table_point[2] = self.clearance
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                     direction='left', angle_deg=30, linear=True)
-            DEBUG('starting dealing')
+            DEBUG()
 
 
     def clear_cards(self, points):
+        """Executes a single clearing motion, by sweeping cards at the specified points off the edge
+        of the game table. The specified cards should be located approximately on the same line and
+        should be sorted in order of x coordinate."""
+
         if len(points) == 0:
             return
 
-        DEBUG('starting dealing')
+        # Move the card scoop to just beside the card
+        DEBUG()
         table_point = [points[0].x, points[0].y, self.clearance]
         table_point[0] -= self.card_shape[0]/2 + 0.02
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=15, linear=True)
 
-        DEBUG('starting dealing')
+        # Move the card scoop down
+        DEBUG()
         table_point[2] = -self.penetration
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=15, linear=True)
 
-        DEBUG('starting dealing')
+        # For each specified card, move to the location to scoop up the card
+        DEBUG()
         for point in points:
             table_point[0] = point.x
             table_point[1] = point.y
@@ -294,28 +289,26 @@ class MotionPlanner:
             self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=15, linear=True)
 
-        DEBUG('starting dealing')
+        # Move off the end of the table to push cards off
+        DEBUG()
         table_point[0] = self.table_shape[0] + 0.01
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=15, linear=True)
-
-        DEBUG('starting dealing')
+        
+        # Move the end effector up to clearance level
+        DEBUG()
         table_point[2] = self.clearance
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=15, linear=True)
 
-        DEBUG('starting dealing')
+        # Tilt the end effector to release any cards still in the card scoop
+        DEBUG()
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                     direction='right', angle_deg=35, linear=True)
 
 
     def flip_card(self, table_point, restore_card_position=False, allowance=0.02, card_leverage=0.02, card_shift=0.005):
-        """Flip a card located at table_point"""
-        # # Move to target x value plus allowance for flip
-        # table_point[0] = point.x - (self.card_shape[0]/2 + 0.002)
-        # self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
-        #                                         direction='right', angle_deg=15, linear=True)
-        # DEBUG('starting dealing')
+        """Flip a card located at table_point. Returns the new location of the card after flipping."""
 
         DEBUG('BEGINNING FLIP')
 
@@ -323,7 +316,7 @@ class MotionPlanner:
         table_point[2] = self.clearance
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
                                                 direction='left', angle_deg=30, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         # Store copy of original point
         original_point = copy.deepcopy(table_point)
@@ -332,51 +325,41 @@ class MotionPlanner:
         table_point[0] -= self.card_shape[0]/2 + allowance
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         # Move down
         table_point[2] = -self.penetration
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         # Move under card
         table_point[0] += allowance + card_leverage
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         # Lift card partially up
         table_point[2] += 0.025
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         # Move up and across to flip
         table_point[0] += 0.1
         table_point[2] += 0.03
         self.move_to_table_point(table_point, end_effector_offset=EndEffectorOffset.CARD_SCOOP,
                                                 direction='right', angle_deg=15, linear=True)
-        DEBUG('starting dealing')
+        DEBUG()
 
         new_table_point = original_point
         new_table_point[0] += self.card_shape[0] + card_shift
 
         return new_table_point
-
-
-
         
-
-
-
-
-
 
     def eef_pose_transform(self, target_pose, end_effector_offset, direction='left', angle_deg=15):
         """Returns the pose to move the robot arm to such that the end effector is at target_pose."""
-
-        # angle_deg = 0
 
         assert 0 <= angle_deg <= 90
         angle_rad = math.radians(angle_deg)
@@ -387,11 +370,6 @@ class MotionPlanner:
             euler = [math.pi/2, math.pi/2 + angle_rad, 0]
         else:
             raise Exception('Invalid direction specified.')
-
-        old_target_position = [target_pose.position.x, target_pose.position.y, target_pose.position.z]
-        # old_target_quaternion = [target_pose.orientation.x, target_pose.orientation.y,
-        #                           target_pose.orientation.z, target_pose.orientation.w]
-
         
         cos_angle = math.cos(angle_rad)
         sin_angle = math.sin(angle_rad)
@@ -425,7 +403,7 @@ class MotionPlanner:
 
 
     def move_to_table_point(self, table_point, end_effector_offset=EndEffectorOffset.CARD_GRIP,
-                            direction='left', angle_deg=15, linear=False):
+                            direction='left', angle_deg=15, linear=True):
         pose = geometry_msgs.msg.Pose()
         pose.position.x, pose.position.y, pose.position.z = self.table_to_robot_transform(table_point)
         eef_pose = self.eef_pose_transform(pose, end_effector_offset, direction, angle_deg)
@@ -434,17 +412,6 @@ class MotionPlanner:
             self.execute_plan(plan)
         else:
             self.move_eef_to_pose(eef_pose)
-
-
-    def move_linear(self, current_pose, target_pose):
-        waypoints = [current_pose, target_pose]
-        plan, _ = self.plan_cartesian_path(waypoints)
-        self.execute_plan(plan)
-
-
-    def move_to_pose(self, table_pose):
-
-        pose_transformed = tf2_geometry_msgs.do_transform_pose(pose_stamped, self.transform)
 
 
     def move_eef_to_pose(self, pose_goal):
@@ -463,9 +430,6 @@ class MotionPlanner:
         # It is always good to clear your targets after planning with poses.
         # Note: there is no equivalent function for clear_joint_value_targets()
         self.move_group.clear_pose_targets()
-
-
-    # def linear_interpolation()
 
 
     def plan_cartesian_path(self, waypoints, eef_step=0.01, jump=0.0, max_attempts=200):

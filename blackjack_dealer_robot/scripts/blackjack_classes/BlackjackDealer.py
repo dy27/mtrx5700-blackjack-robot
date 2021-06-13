@@ -27,10 +27,6 @@ class BlackjackDealer:
         # Flag to track if player actions are eligible
         self.bust = False
 
-        # Print message
-        # print("[INFO]: {} created.\n".format(self.name))
-
-
     def reset(self):
         self.hand = []
         self.value = 0
@@ -74,18 +70,18 @@ class BlackjackDealer:
     def print_hand(self):
         
         # Get list of card names
-        cards_list = [card.name for card in self.hand]
+        cards_list = [str(card.value) for card in self.hand]
         # Print list
-        print("[{}]: Hand: {}; Value:{}".format(self.name, cards_list, self.value))
+        print("[{}]: Hand: {}; Value:{}".format(str(self.player_id), cards_list, self.value))
 
     # Reveal first card
     def print_first_card(self):
 
         # Print first card
-        print("[{}]: Hand: {}".format(self.name, self.hand[0].name))
+        print("[{}]: Hand: {}".format(str(self.player_id), self.hand[0].name))
 
     # Print message if dealer gets blackjack
     def print_blackjack_msg(self):
 
         # Print message
-        print("[{}]: Blackjack!".format(self.name))
+        print("[{}]: Blackjack!".format(str(self.player_id)))
